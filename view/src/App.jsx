@@ -21,14 +21,18 @@ const PAGES = {
     component: LiquidityAgent,
   },
   fx: {
-    title: 'FX Hedging',
+    title: 'Currency Exposure',
     subtitle: 'Booked CHF payments and forward simulation',
     component: FXAgent,
   },
-  tax: { title: 'Tax planning', subtitle: 'Advance payments & optimization', component: TaxAgent },
+  tax: {
+    title: 'Tax Payments',
+    subtitle: 'Scheduled taxes and advance payment simulations',
+    component: TaxAgent,
+  },
   investment: {
     title: 'Investment Agent',
-    subtitle: 'Idle liquidity deployment',
+    subtitle: 'Cash available for short-term investment',
     component: InvestmentAgent,
   },
   transactions: {

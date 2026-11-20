@@ -10,6 +10,10 @@ export default function InvestmentAgent() {
     <>
       <section className="card mb-4">
         <div className="card-title">Short-term deposit assessment</div>
+        <p className="card-sub">
+          The forecast sets aside operating cash and your safety reserve. Any remaining cash can be
+          assessed for a term deposit.
+        </p>
         <RecommendationCard role="investment" />
       </section>
       <div className="grid-even" key={state.revision}>

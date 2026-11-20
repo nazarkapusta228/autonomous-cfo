@@ -20,7 +20,7 @@ oc get isvc cfo-qwen
 oc get deployments,pvc
 ```
 
-Для перевірки відкрийте Dashboard, запустіть liquidity agent і погодьте симуляцію.
+Для перевірки відкрийте Liquidity Agent, запустіть агента й погодьте симуляцію.
 Після оновлення сторінки стан і номер заявки відновлюються з PostgreSQL. Щоб показати
 інвестиційний сценарій, у Liquidity Agent задайте початковий залишок 25000, натисніть
 Run forecast і потім Run investment agent у вкладці Investment.

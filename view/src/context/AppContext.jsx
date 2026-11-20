@@ -5,17 +5,11 @@ const AppContext = createContext();
 
 export function AppProvider({ children }) {
   const [state, setState] = useState(null);
-  const [health, setHealth] = useState({});
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const active = useRef(false);
   const initial = useRef(null);
 
-  function refreshHealth() {
-    api('health')
-      .then(setHealth)
-      .catch(() => setHealth({}));
-  }
   async function refresh() {
     setError('');
     try {
@@ -23,7 +17,6 @@ export function AppProvider({ children }) {
     } catch (e) {
       setError(e.message);
     }
-    refreshHealth();
   }
   useEffect(() => {
     if (!initial.current) initial.current = refresh();
@@ -49,7 +42,7 @@ export function AppProvider({ children }) {
   }
 
   return (
-    <AppContext.Provider value={{ state, health, busy, submit, refresh, refreshHealth, setError }}>
+    <AppContext.Provider value={{ state, busy, submit, refresh, setError }}>
       {state ? (
         children
       ) : (

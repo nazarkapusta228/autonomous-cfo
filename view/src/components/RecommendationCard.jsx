@@ -57,10 +57,7 @@ function Comparison({ role, proposal, fc }) {
       </form>
       {comparison && (
         <>
-          <p>
-            Baseline (yellow) and simulated balance (green). Principal outstanding at horizon end:{' '}
-            {eur(comparison.outstanding_principal)}.
-          </p>
+          <p>Principal outstanding at horizon end: {eur(comparison.outstanding_principal)}.</p>
           <BalanceChart
             points={comparison.baseline}
             action={comparison.with_action}
@@ -106,10 +103,20 @@ export default function RecommendationCard({ role }) {
         </p>
       )}
       {role === 'investment' && (
-        <p>
-          Operations {eur(p.operating_cash)} · Reserve {eur(p.reserve_cash)} · Free cash{' '}
-          {eur(p.free_cash)}
-        </p>
+        <dl className="data-strip">
+          <div>
+            <dt>Operations</dt>
+            <dd>{eur(p.operating_cash)}</dd>
+          </div>
+          <div>
+            <dt>Safety reserve</dt>
+            <dd>{eur(p.reserve_cash)}</dd>
+          </div>
+          <div>
+            <dt>Free to invest</dt>
+            <dd className="amount-pos">{eur(p.free_cash)}</dd>
+          </div>
+        </dl>
       )}
       <p>{p.explanation}</p>
       <ul>

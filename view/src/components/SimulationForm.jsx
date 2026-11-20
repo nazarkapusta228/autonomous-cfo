@@ -86,13 +86,37 @@ export default function SimulationForm({
           confirmLabel="Approve simulation"
         />
       )}
-      {records.map((s) => (
-        <p className="section" key={s.id}>
-          Simulated #{s.id} · {s.basis.effective_on} · {s.basis.amount} {unit}
-          {s.basis.estimated_eur &&
-            ' · ' + eur(s.basis.estimated_eur) + ' at ' + s.basis.eur_per_chf + ' EUR/CHF'}
-        </p>
-      ))}
+      {records.length > 0 && (
+        <table className="table section">
+          <caption>Approved simulations for this forecast</caption>
+          <thead>
+            <tr>
+              <th>Record</th>
+              <th>Effective date</th>
+              <th>Amount ({unit})</th>
+              {fx && <th>Estimated EUR at assumed rate</th>}
+            </tr>
+          </thead>
+          <tbody>
+            {records.map((s) => (
+              <tr key={s.id}>
+                <td>
+                  <span className="badge badge-sim">Simulated #{s.id}</span>
+                </td>
+                <td>{s.basis.effective_on}</td>
+                <td>
+                  {s.basis.amount} {unit}
+                </td>
+                {fx && (
+                  <td>
+                    {eur(s.basis.estimated_eur)} at {s.basis.eur_per_chf} EUR/CHF
+                  </td>
+                )}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
     </section>
   );
 }

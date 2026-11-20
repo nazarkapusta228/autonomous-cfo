@@ -11,6 +11,10 @@ function InvoiceReview() {
   return (
     <section className="card mb-4">
       <div className="card-title">Invoice reconciliation</div>
+      <p className="card-sub">
+        Imported invoices matched against booked statement payments. Confirm uncertain matches
+        below.
+      </p>
       <p>
         {Object.keys(report.settled).length} settled · {report.outstanding.length} outstanding
       </p>
@@ -61,11 +65,29 @@ function InvoiceReview() {
           </button>
         </div>
       ))}
-      {Object.entries(report.payment_patterns).map(([party, p]) => (
-        <p key={party}>
-          {party} · {p.late_payments}/{p.payments} late · median delay {p.median_delay_days} days
-        </p>
-      ))}
+      {Object.keys(report.payment_patterns).length > 0 && (
+        <table className="table section">
+          <caption>Payment timing from matched invoices</caption>
+          <thead>
+            <tr>
+              <th>Counterparty</th>
+              <th>Late payments / matched</th>
+              <th>Median delay</th>
+            </tr>
+          </thead>
+          <tbody>
+            {Object.entries(report.payment_patterns).map(([party, p]) => (
+              <tr key={party}>
+                <td>{party}</td>
+                <td>
+                  {p.late_payments} / {p.payments}
+                </td>
+                <td>{p.median_delay_days} days</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
     </section>
   );
 }
@@ -125,6 +147,10 @@ export default function Transactions() {
       <InvoiceReview key={state.revision} />
       <section className="card mb-4">
         <div className="card-title">Account history</div>
+        <p className="card-sub">
+          Historical balances start from the opening amount and include booked statement movements
+          through the cut-off date.
+        </p>
         {state.history.length ? (
           <BalanceChart points={state.history} />
         ) : (
@@ -169,6 +195,9 @@ export default function Transactions() {
       </section>
       <section className="card">
         <div className="card-title">Account activity · {rows.length} payments</div>
+        <p className="card-sub">
+          Filtered bank statement entries. Amounts are shown in the original currency.
+        </p>
         {editing && (
           <EditCategory
             key={editing.source_row}
@@ -197,7 +226,7 @@ export default function Transactions() {
                 </td>
                 <td>{t.reference}</td>
                 <td>{t.counterparty}</td>
-                <td>
+                <td className={Number(t.amount) < 0 ? 'amount-neg' : 'amount-pos'}>
                   {t.amount} {t.currency}
                 </td>
               </tr>

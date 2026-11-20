@@ -4,9 +4,9 @@ import { LayoutDashboard, Droplets, Coins, Receipt, TrendingUp, ListOrdered } fr
 const NAV = [
   { key: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { key: 'liquidity', label: 'Liquidity Agent', icon: Droplets },
-  { key: 'fx', label: 'FX Hedging', icon: Coins },
-  { key: 'tax', label: 'Tax planning', icon: Receipt },
-  { key: 'investment', label: 'Investment', icon: TrendingUp },
+  { key: 'fx', label: 'Currency Exposure', icon: Coins },
+  { key: 'tax', label: 'Tax Payments', icon: Receipt },
+  { key: 'investment', label: 'Investment Agent', icon: TrendingUp },
   { key: 'transactions', label: 'Transactions', icon: ListOrdered },
 ];
 
@@ -35,9 +35,10 @@ export default function Sidebar({ active, onNavigate }) {
             <button
               key={n.key}
               className={`nav-item ${active === n.key ? 'active' : ''}`}
+              aria-current={active === n.key ? 'page' : undefined}
               onClick={() => onNavigate(n.key)}
             >
-              <Icon size={16} />
+              <Icon size={20} aria-hidden="true" />
               {n.label}
             </button>
           );

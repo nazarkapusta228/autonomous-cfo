@@ -34,14 +34,14 @@ FastAPI and open http://127.0.0.1:5173. API documentation is available at `/docs
 
 ## Walk through the demo
 
-1. On Dashboard run the liquidity agent. The supplied assumptions give a shortfall of
+1. Review the Dashboard forecast, then open Liquidity Agent and run the agent. The supplied assumptions give a shortfall of
    €10,843.69 by 13 June 2025. Compare the two balance curves, then approve or reject.
 2. Under Liquidity Agent set the starting balance to €25,000 and run the forecast.
-   Under Investment run the second agent to see the operating cash, reserve and deposit
+   Under Investment Agent run the second agent to see the operating cash, reserve and deposit
    proposal. Changing the forecast creates a new decision context.
 3. Under Transactions inspect the bank history, filter categories, correct a payment or
    resolve an ambiguous invoice. CSV uploads are under Liquidity Agent → Import CSV files.
-4. Under FX Hedging and Tax planning enter the terms of a simulation. Money market and
+4. Under Currency Exposure and Tax Payments enter the terms of a simulation. Money market and
    equipment finance enquiries are also available. The dashboard records each decision.
 
 Each browser receives an isolated demo workspace via an HTTP-only cookie. Keep that cookie

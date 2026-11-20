@@ -4,12 +4,12 @@
   --bg-card: #172042;
   --border: #24305a;
   --text: #e6ecff;
-  --text-muted: #8a96c0;
+  --text-muted: #b9c5e1;
   --primary: #ffcc00;
   --primary-dark: #e0b400;
   --accent: #6ea8ff;
   --success: #3ddc97;
-  --danger: #ff6b6b;
+  --danger: #ff93a4;
   --warning: #ffb347;
   --radius: 12px;
   --shadow: 0 6px 24px rgba(0, 0, 0, 0.35);
@@ -31,7 +31,7 @@ button { font-family: inherit; cursor: pointer; border: none; }
 .app-shell { display: flex; height: 100vh; overflow: hidden; }
 
 .sidebar {
-  width: 250px;
+  width: 280px;
   background: var(--bg-elev);
   border-right: 1px solid var(--border);
   display: flex;
@@ -58,11 +58,11 @@ button { font-family: inherit; cursor: pointer; border: none; }
 
 .nav-item {
   display: flex; align-items: center; gap: 10px;
-  padding: 10px 12px;
+  padding: 13px 16px;
   border-radius: 8px;
-  color: var(--text-muted);
+  color: var(--text);
   background: transparent;
-  font-size: 13.5px;
+  font-size: 16px;
   font-weight: 500;
   text-align: left;
   transition: all .15s ease;
@@ -120,10 +120,10 @@ button { font-family: inherit; cursor: pointer; border: none; }
   box-shadow: var(--shadow);
 }
 .card-title {
-  font-size: 14px; font-weight: 700; margin-bottom: 4px;
+  font-size: 18px; font-weight: 700; margin-bottom: 6px;
   display: flex; justify-content: space-between; align-items: center;
 }
-.card-sub { font-size: 12px; color: var(--text-muted); margin-bottom: 16px; }
+.card-sub { line-height: 1.5; font-size: 14px; color: var(--text-muted); margin-bottom: 16px; }
 
 /* KPI grid */
 .kpi-grid {
@@ -193,15 +193,17 @@ button { font-family: inherit; cursor: pointer; border: none; }
 .btn:disabled { opacity: .4; cursor: not-allowed; }
 
 /* Tables */
-.table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+.table { width: 100%; border-collapse: collapse; font-size: 14px; font-variant-numeric: tabular-nums; }
+.table caption { text-align: left; color: var(--text-muted); font-size: 13px; padding: 8px 0; }
 .table thead th {
   text-align: left; padding: 10px 12px;
-  color: var(--text-muted); font-weight: 600; font-size: 11px;
+  background: #202e50; color: #dce6fa; font-weight: 650; font-size: 12px;
   text-transform: uppercase; letter-spacing: .05em;
   border-bottom: 1px solid var(--border);
 }
 .table tbody td { padding: 11px 12px; border-bottom: 1px solid rgba(36,48,90,.5); }
-.table tbody tr:hover { background: rgba(255,204,0,.03); }
+.table tbody tr:nth-child(even) { background: rgba(121,150,217,.055); }
+.table tbody tr:hover { background: rgba(121,150,217,.13); }
 .amount-pos { color: var(--success); font-weight: 600; }
 .amount-neg { color: var(--danger); font-weight: 600; }
 
@@ -245,7 +247,7 @@ button { font-family: inherit; cursor: pointer; border: none; }
 .tier-value { font-size: 13px; font-weight: 700; }
 
 /* Chart container */
-.chart-wrap { width: 100%; height: 260px; margin-top: 12px; }
+.chart-wrap { width: 100%; height: clamp(290px, 33vh, 400px); margin-top: 12px; }
 
 /* Modal */
 .modal-backdrop {
@@ -321,11 +323,31 @@ summary { cursor: pointer; color: var(--accent); }
 .card { min-width: 0; overflow-x: auto; }
 .card p, .rec-block ul { line-height: 1.6; }
 .rec-block ul { padding-left: 20px; margin: 8px 0; }
-.health { display: flex; justify-content: space-between; margin-bottom: 10px; }
+
+.metric-hint { color: var(--text-muted); font-size: 13px; line-height: 1.5; }
+.numeric, .table th.numeric { text-align: right; white-space: nowrap; }
+.date-cell { white-space: nowrap; }
+.payment-bar { display: block; width: min(105px, 100%); height: 5px; margin: 5px 0 0 auto; background: #394565; border-radius: 4px; }
+.payment-bar i { display: block; height: 100%; min-width: 2px; background: var(--danger); border-radius: inherit; }
+.chart-key { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; font-size: 13px; }
+.chart-key span { display: inline-flex; gap: 6px; align-items: center; }
+.chart-key i { width: 21px; border-top: 3px solid #ffdb66; }
+.chart-key .key-action { border-top: 3px dashed #66e8b5; }
+.chart-key .key-reserve { border-top: 2px dashed #a9c8ff; }
+.chart-alert { color: #ffc1cc; background: #49263c; border-radius: 5px; padding: 4px 8px; }
+.recharts-cartesian-axis-tick text { fill: #dbe5fa; font-size: 13px; font-variant-numeric: tabular-nums; }
+.data-strip { display: flex; flex-wrap: wrap; gap: 10px; margin: 12px 0; }
+.data-strip div { flex: 1 1 120px; border-left: 3px solid var(--accent); padding: 8px 12px; background: var(--bg-elev); }
+.data-strip dt { color: var(--text-muted); font-size: 13px; }
+.data-strip dd { margin-top: 4px; font-weight: 700; font-variant-numeric: tabular-nums; }
+
 @media (max-width: 720px) {
   .app-shell { display: block; height: auto; overflow: visible; }
   .sidebar { width: 100%; height: auto; position: static; }
-  .sidebar-nav { display: grid; grid-template-columns: repeat(3, 1fr); }
+  .sidebar-nav { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .nav-item { font-size: 15px; padding: 10px 8px; }
+  .kpi { padding: 12px; }
+  .kpi-value { font-size: clamp(19px, 5vw, 24px); }
   .sidebar-brand, .header, .content { padding: 12px; }
   .sidebar-footer, .user-chip { display: none; }
   .main-area, .content { overflow: visible; }

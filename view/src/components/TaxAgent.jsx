@@ -19,18 +19,39 @@ export default function TaxAgent() {
       />
       <section className="card mb-4">
         <div className="card-title">Tax payment calendar</div>
+        <p className="card-sub">
+          Forecast entries whose category or description mentions tax or Steuer.
+        </p>
         {planned.length ? (
-          planned.map((p, i) => (
-            <p key={i}>
-              {p.date} · {p.description} · {eur(p.amount_eur)}
-            </p>
-          ))
+          <table className="table">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Planned payment</th>
+                <th>Amount (EUR)</th>
+              </tr>
+            </thead>
+            <tbody>
+              {planned.map((p, i) => (
+                <tr key={i}>
+                  <td>{p.date}</td>
+                  <td>{p.description}</td>
+                  <td className={Number(p.amount_eur) < 0 ? 'amount-neg' : 'amount-pos'}>
+                    {eur(p.amount_eur)}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         ) : (
           <p>No identified tax payments in the current plan.</p>
         )}
       </section>
       <section className="card">
         <div className="card-title">Booked tax payments</div>
+        <p className="card-sub">
+          Bank statement entries categorized as Taxes through the cut-off date.
+        </p>
         {rows.length ? (
           <table className="table">
             <thead>
@@ -45,7 +66,9 @@ export default function TaxAgent() {
                 <tr key={t.source_row}>
                   <td>{t.value_on}</td>
                   <td>{t.reference}</td>
-                  <td>{eur(t.amount_eur)}</td>
+                  <td className={Number(t.amount_eur) < 0 ? 'amount-neg' : 'amount-pos'}>
+                    {eur(t.amount_eur)}
+                  </td>
                 </tr>
               ))}
             </tbody>

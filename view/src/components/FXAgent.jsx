@@ -1,7 +1,15 @@
 import React from 'react';
 import { useApp } from '../context/AppContext';
 import { eur } from '../lib/api';
-import { LineChart, Line, Tooltip, ResponsiveContainer, XAxis, YAxis } from 'recharts';
+import {
+  CartesianGrid,
+  LineChart,
+  Line,
+  Tooltip,
+  ResponsiveContainer,
+  XAxis,
+  YAxis,
+} from 'recharts';
 import SimulationForm from './SimulationForm';
 
 export default function FXAgent() {
@@ -12,9 +20,19 @@ export default function FXAgent() {
     <>
       <section className="card mb-4">
         <div className="card-title">Booked currency exposure</div>
-        <p>
-          Net CHF movements {fx.booked_chf} CHF · EUR equivalent {eur(fx.booked_eur)}
+        <p className="card-sub">
+          Net amounts from CHF transactions in the bank statement through the cut-off.
         </p>
+        <dl className="data-strip">
+          <div>
+            <dt>Net CHF movements</dt>
+            <dd>{fx.booked_chf} CHF</dd>
+          </div>
+          <div>
+            <dt>Booked EUR equivalent</dt>
+            <dd>{eur(fx.booked_eur)}</dd>
+          </div>
+        </dl>
         {fx.rates.length > 0 && (
           <>
             <p className="card-sub">
@@ -22,14 +40,29 @@ export default function FXAgent() {
             </p>
             <div className="chart-wrap">
               <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={fx.rates.map((p) => ({ ...p, rate: Number(p.rate) }))}>
-                  <XAxis dataKey="day" />
-                  <YAxis domain={['auto', 'auto']} width={65} />
+                <LineChart
+                  accessibilityLayer
+                  data={fx.rates.map((p) => ({ ...p, rate: Number(p.rate) }))}
+                >
+                  <CartesianGrid vertical={false} stroke="#526080" strokeDasharray="3 5" />
+                  <XAxis
+                    dataKey="day"
+                    tickFormatter={(day) => day.slice(5)}
+                    minTickGap={26}
+                    stroke="#ccd7ef"
+                  />
+                  <YAxis
+                    domain={['auto', 'auto']}
+                    width={74}
+                    tickFormatter={(rate) => rate.toFixed(4)}
+                    stroke="#ccd7ef"
+                  />
                   <Tooltip contentStyle={{ background: '#172042' }} />
                   <Line
                     dataKey="rate"
                     name="Booked EUR per CHF"
-                    stroke="#6ea8ff"
+                    stroke="#9aceff"
+                    strokeWidth={3}
                     isAnimationActive={false}
                   />
                 </LineChart>
@@ -64,8 +97,10 @@ export default function FXAgent() {
                 <tr key={t.source_row}>
                   <td>{t.value_on}</td>
                   <td>{t.reference}</td>
-                  <td>{t.amount}</td>
-                  <td>{eur(t.amount_eur)}</td>
+                  <td className={Number(t.amount) < 0 ? 'amount-neg' : 'amount-pos'}>{t.amount}</td>
+                  <td className={Number(t.amount_eur) < 0 ? 'amount-neg' : 'amount-pos'}>
+                    {eur(t.amount_eur)}
+                  </td>
                 </tr>
               ))}
             </tbody>
