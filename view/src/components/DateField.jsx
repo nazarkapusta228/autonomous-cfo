@@ -11,7 +11,6 @@ export default function DateField({ label, value, onChange, min, max, shortcuts 
           value={value}
           min={min}
           max={max}
-          onClick={(event) => event.currentTarget.showPicker?.()}
           onChange={(event) => onChange(event.target.value)}
         />
       </label>

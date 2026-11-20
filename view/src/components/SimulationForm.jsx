@@ -10,15 +10,21 @@ export default function SimulationForm({
   title,
   description,
   suggested = '',
-  disabled = false,
   suggestedDate,
 }) {
   const { state, busy, submit } = useApp();
-  const [amount, setAmount] = useState(suggested);
+  const [enteredAmount, setAmount] = useState(null);
+  const amount = enteredAmount ?? suggested;
   const [date, setDate] = useState(suggestedDate || nextDay(state.settings.as_of));
   const [rate, setRate] = useState('');
   const [confirm, setConfirm] = useState(false);
   const fx = kind === 'fx_forward';
+  const fund = kind === 'money_market';
+  const assessed = Boolean(state.assessments.investment);
+  const free = Number(state.assessments.investment?.recommendation.free_cash ?? 0);
+  const needsAssessment = fund && !assessed;
+  const noSurplus = fund && assessed && free <= 0;
+  const blocked = needsAssessment || noSurplus;
   const labels = {
     fx_forward: 'Review CHF forward',
     money_market: 'Review fund enquiry',
@@ -31,8 +37,7 @@ export default function SimulationForm({
   async function approve() {
     const fields = { kind, amount, effective_on: date };
     if (fx) fields.eur_per_chf = rate;
-    await submit('simulations', fields);
-    setConfirm(false);
+    if (await submit('simulations', fields)) setConfirm(false);
   }
   return (
     <section className="card mb-4">
@@ -52,6 +57,7 @@ export default function SimulationForm({
               type="number"
               step=".01"
               min=".01"
+              max={fund && free > 0 ? free : undefined}
               required
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
@@ -115,7 +121,7 @@ export default function SimulationForm({
             </p>
           </div>
         )}
-        <button className="btn btn-primary" disabled={busy || disabled}>
+        <button className="btn btn-primary" formNoValidate={blocked} disabled={busy}>
           {kind === 'capex' && <BriefcaseBusiness size={16} aria-hidden="true" />}
           {kind === 'money_market' && <Coins size={16} aria-hidden="true" />}
           {labels[kind]}
@@ -124,6 +130,20 @@ export default function SimulationForm({
       {confirm && (
         <ApprovalModal
           title={title}
+          blockedMessage={
+            needsAssessment
+              ? 'Run the investment assessment to calculate the free cash available for this enquiry.'
+              : noSurplus
+                ? 'This forecast has no cash available for a fund placement. Review the forecast inputs in Liquidity Agent before requesting a placement.'
+                : ''
+          }
+          onAssess={
+            needsAssessment
+              ? async () => {
+                  if (await submit('agents/investment')) setConfirm(false);
+                }
+              : undefined
+          }
           description={
             amount + ' ' + unit + ' on ' + date + (fx ? ' at ' + rate + ' EUR per CHF.' : '.')
           }

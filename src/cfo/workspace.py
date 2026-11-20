@@ -115,10 +115,10 @@ def analyse(dsn, row):
     )
 
 
-def ledger(dsn, row):
+def ledger(dsn, row, transactions=None):
     overrides, rules = load_categories(dsn, row["import_id"])
     return categorize(
-        parse_statement(row["statement"]),
+        parse_statement(row["statement"]) if transactions is None else transactions,
         overrides=overrides,
         rules=rules,
         as_of=ForecastSettings.model_validate(row["settings"]).as_of,
@@ -127,7 +127,8 @@ def ledger(dsn, row):
 
 def snapshot(conn, dsn, row):
     analysis = analyse(dsn, row)
-    groups = ledger(dsn, row)
+    transactions = parse_statement(row["statement"])
+    groups = ledger(dsn, row, transactions)
     records = sorted(
         (
             dict(t.model_dump(mode="json"), category=name)
@@ -138,7 +139,7 @@ def snapshot(conn, dsn, row):
         reverse=True,
     )
     visible = [t for group in groups.values() for t in group.transactions]
-    history = daily_balances(visible, analysis.starting_balance) if visible else []
+    history = daily_balances(transactions, analysis.starting_balance)
     foreign = sorted((t for t in visible if t.currency == "CHF"), key=lambda t: t.value_on)
     fx = {
         "booked_chf": str(sum((t.amount for t in foreign), Decimal(0))),

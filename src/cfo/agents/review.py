@@ -6,11 +6,11 @@ from cfo.models import LiquidityForecast
 
 STEPS = {
     "propose_credit": {
-        "facility": "Ask Commerzbank about a credit line before the reserve is breached.",
+        "facility": "Check the funding deadline against the first projected reserve breach.",
         "receipts": "Confirm expected receipt dates before approving a credit-line request.",
     },
     "propose_investment": {
-        "deposit": "Request a Commerzbank term-deposit quote within the forecast window.",
+        "deposit": "Check the deposit maturity against the forecast window.",
         "access": "Confirm the withdrawal terms before committing the available surplus.",
     },
     "hold": {

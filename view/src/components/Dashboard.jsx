@@ -1,6 +1,7 @@
 import React from 'react';
 import { useApp } from '../context/AppContext';
 import { eur } from '../lib/api';
+import AuditTrail from './AuditTrail';
 import BalanceChart from './BalanceChart';
 
 export default function Dashboard() {
@@ -62,28 +63,7 @@ export default function Dashboard() {
           numbers.
         </p>
         {state.audit.length ? (
-          <table className="table">
-            <thead>
-              <tr>
-                <th>Time</th>
-                <th>Workflow</th>
-                <th>Event</th>
-                <th>Record</th>
-              </tr>
-            </thead>
-            <tbody>
-              {state.audit.map((e, i) => (
-                <tr key={i}>
-                  <td>{new Date(e.occurred_at).toLocaleString()}</td>
-                  <td>{e.kind}</td>
-                  <td>
-                    <span className="badge badge-sim">{e.event}</span>
-                  </td>
-                  <td>#{e.number}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <AuditTrail events={state.audit} />
         ) : (
           <p className="text-muted">No activity recorded yet.</p>
         )}

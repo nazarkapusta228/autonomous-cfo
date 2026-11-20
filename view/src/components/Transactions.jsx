@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { eur } from '../lib/api';
-import BalanceChart from './BalanceChart';
+import StatementHistory from './StatementHistory';
 
 function InvoiceReview() {
   const { state, busy, submit } = useApp();
@@ -139,34 +139,33 @@ export default function Transactions() {
   const [search, setSearch] = useState('');
   const [notice, setNotice] = useState('');
   const [editing, setEditing] = useState(null);
-  const [limit, setLimit] = useState(50);
+  const [page, setPage] = useState(0);
   const rows = state.transactions.filter(
     (t) =>
       (!type || type === t.kind) &&
       (!category || category === t.category) &&
       (t.reference + ' ' + t.counterparty).toLowerCase().includes(search.toLowerCase()),
   );
+  const pages = Math.max(1, Math.ceil(rows.length / 50));
+  const current = Math.min(page, pages - 1);
+  const offset = current * 50;
   return (
     <>
       <InvoiceReview key={state.revision} />
       <section className="card mb-4">
         <div className="card-title">Account history</div>
-        <p className="card-sub">
-          Historical balances start from the opening amount and include booked statement movements
-          through the cut-off date.
-        </p>
-        {state.history.length ? (
-          <BalanceChart neutral points={state.history} />
-        ) : (
-          <p>No booked entries at this cutoff.</p>
-        )}
+        <StatementHistory points={state.history} key={state.revision} />
         <div className="controls">
           <label>
             Payment type
             <select
               aria-label="Payment type"
               value={type}
-              onChange={(e) => setType(e.target.value)}
+              onChange={(e) => {
+                setType(e.target.value);
+                setPage(0);
+                setEditing(null);
+              }}
             >
               <option value="">All types</option>
               {[...new Set(state.transactions.map((t) => t.kind))].sort().map((k) => (
@@ -179,7 +178,11 @@ export default function Transactions() {
             <select
               aria-label="Category"
               value={category}
-              onChange={(e) => setCategory(e.target.value)}
+              onChange={(e) => {
+                setCategory(e.target.value);
+                setPage(0);
+                setEditing(null);
+              }}
             >
               <option value="">All categories</option>
               {Object.entries(state.categories)
@@ -193,7 +196,15 @@ export default function Transactions() {
           </label>
           <label>
             Search reference or counterparty
-            <input type="search" value={search} onChange={(e) => setSearch(e.target.value)} />
+            <input
+              type="search"
+              value={search}
+              onChange={(e) => {
+                setSearch(e.target.value);
+                setPage(0);
+                setEditing(null);
+              }}
+            />
           </label>
         </div>
       </section>
@@ -201,15 +212,16 @@ export default function Transactions() {
         <div className="card-title">Account activity · {rows.length} payments</div>
         <p className="card-sub">
           {state.transactions.length} of {state.statement_info.total} imported payments were booked
-          and valued by {state.settings.as_of}. Showing {Math.min(limit, rows.length)} matching rows
-          in their original currencies. To include the entire file, select “Last statement date” in
-          Liquidity Agent and run the forecast.
+          and valued by {state.settings.as_of}. Showing {rows.length ? offset + 1 : 0}–
+          {Math.min(offset + 50, rows.length)} of {rows.length} matching rows in their original
+          currencies. To include the entire file, select “Last statement date” in Liquidity Agent
+          and run the forecast.
         </p>
         <p role="status">{notice}</p>
         <table className="table">
           <thead>
             <tr>
-              <th>Value date</th>
+              <th className="date-cell">Value date</th>
               <th>Category</th>
               <th>Reference</th>
               <th>Counterparty</th>
@@ -217,10 +229,10 @@ export default function Transactions() {
             </tr>
           </thead>
           <tbody>
-            {rows.slice(0, limit).map((t) => (
+            {rows.slice(offset, offset + 50).map((t) => (
               <React.Fragment key={t.source_row}>
                 <tr>
-                  <td>{t.value_on}</td>
+                  <td className="date-cell">{t.value_on}</td>
                   <td>
                     <button
                       className="btn btn-ghost"
@@ -234,7 +246,7 @@ export default function Transactions() {
                   </td>
                   <td>{t.reference}</td>
                   <td>{t.counterparty}</td>
-                  <td className={Number(t.amount) < 0 ? 'hover-negative' : 'amount-pos'}>
+                  <td className={Number(t.amount) < 0 ? 'amount-neg' : 'amount-pos'}>
                     {t.amount} {t.currency}
                   </td>
                 </tr>
@@ -257,10 +269,32 @@ export default function Transactions() {
             ))}
           </tbody>
         </table>
-        {rows.length > limit && (
-          <button className="btn btn-ghost" onClick={() => setLimit(limit + 50)}>
-            Show more payments
-          </button>
+        {pages > 1 && (
+          <nav aria-label="Payment pages" className="controls">
+            <button
+              className="btn btn-ghost"
+              disabled={!current}
+              onClick={() => {
+                setPage(current - 1);
+                setEditing(null);
+              }}
+            >
+              Previous 50
+            </button>
+            <span>
+              Page {current + 1} of {pages}
+            </span>
+            <button
+              className="btn btn-ghost"
+              disabled={current + 1 === pages}
+              onClick={() => {
+                setPage(current + 1);
+                setEditing(null);
+              }}
+            >
+              Next 50
+            </button>
+          </nav>
         )}
       </section>
     </>

@@ -1,0 +1,58 @@
+import React from 'react';
+
+const workflows = {
+  tax_prepayment: 'Tax prepayment',
+  fx_forward: 'CHF forward',
+  money_market: 'Money market enquiry',
+  capex: 'Equipment financing',
+  investment: 'Investment decision',
+  liquidity: 'Liquidity decision',
+};
+const stages = {
+  assessed: 'Agent review completed',
+  approved: 'Owner approved',
+  rejected: 'Owner declined',
+  simulated: 'Simulation recorded',
+};
+const order = ['assessed', 'approved', 'rejected', 'simulated'];
+
+export default function AuditTrail({ events }) {
+  const records = new Map();
+  for (const event of events) {
+    const key = event.kind + '-' + event.number;
+    if (!records.has(key)) records.set(key, []);
+    records.get(key).push(event);
+  }
+  return (
+    <div className="audit-trail">
+      {Array.from(records, ([key, list]) => {
+        const latest = list[0];
+        const steps = [...list].sort(
+          (a, b) =>
+            a.occurred_at.localeCompare(b.occurred_at) ||
+            order.indexOf(a.event) - order.indexOf(b.event),
+        );
+        return (
+          <article key={key}>
+            <header>
+              <strong>{workflows[latest.kind] || latest.kind}</strong>
+              <small>
+                Record #{latest.number} · {new Date(latest.occurred_at).toLocaleDateString()}
+              </small>
+            </header>
+            <ol>
+              {steps.map((s, i) => (
+                <li key={i}>
+                  <span>{stages[s.event] || s.event}</span>
+                  <time dateTime={s.occurred_at}>
+                    {new Date(s.occurred_at).toLocaleTimeString()}
+                  </time>
+                </li>
+              ))}
+            </ol>
+          </article>
+        );
+      })}
+    </div>
+  );
+}

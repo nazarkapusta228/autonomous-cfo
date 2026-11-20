@@ -16,13 +16,11 @@ export default function InvestmentAgent() {
         </p>
         <RecommendationCard role="investment" />
       </section>
-      <div className="grid-even" key={state.revision}>
+      <div className="grid-even enquiry-pair" key={state.revision}>
         <SimulationForm
-          key={free ?? 'unassessed'}
           kind="money_market"
           title="Money market enquiry"
           suggested={free || ''}
-          disabled={!(Number(free) > 0)}
           description="Simulate a request for a fund quote within the investment agent’s free-cash limit. Run the assessment first."
         />
         <SimulationForm

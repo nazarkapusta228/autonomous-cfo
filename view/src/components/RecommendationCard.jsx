@@ -67,6 +67,7 @@ function Comparison({ role, proposal, fc }) {
             {eur(comparison.outstanding_principal)}.
           </p>
           <BalanceChart
+            neutral
             points={comparison.baseline}
             action={comparison.with_action}
             reserve={fc.reserve}
@@ -158,7 +159,28 @@ export default function RecommendationCard({ role }) {
             ))}
           </div>
         )}
-      <p>{p.explanation}</p>
+      {role === 'liquidity' && state.analysis.forecast.drivers.length > 0 && (
+        <table className="table section">
+          <caption>Planned outflows contributing to the shortfall</caption>
+          <thead>
+            <tr>
+              <th>Payment date</th>
+              <th>Category</th>
+              <th>Amount</th>
+            </tr>
+          </thead>
+          <tbody>
+            {state.analysis.forecast.drivers.map((d, i) => (
+              <tr key={i}>
+                <td className="date-cell">{d.date}</td>
+                <td>{d.category}</td>
+                <td>{eur(d.amount_eur)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+      <h4>Risks to consider</h4>
       <ul>
         {p.risks.map((r) => (
           <li key={r}>{r}</li>

@@ -151,7 +151,11 @@ export default function LiquidityAgent() {
   return (
     <>
       <Inputs key={state.revision} />
-      <div className="grid-2">
+      <div className="liquidity-results">
+        <section className="card">
+          <div className="card-title">Liquidity decision</div>
+          <RecommendationCard role="liquidity" />
+        </section>
         <section className="card">
           <div className="card-title">Forecast · {state.settings.horizon_days} days</div>
           <p className="card-sub">
@@ -159,13 +163,10 @@ export default function LiquidityAgent() {
             on {f.minimum_on}.
           </p>
           <BalanceChart
+            neutral
             points={[{ day: f.as_of, balance: f.opening_balance }, ...f.daily_balances]}
             reserve={f.reserve}
           />
-        </section>
-        <section className="card">
-          <div className="card-title">Liquidity decision</div>
-          <RecommendationCard role="liquidity" />
         </section>
       </div>
       <section className="card mb-4">
