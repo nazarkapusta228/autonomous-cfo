@@ -1,0 +1,21 @@
+apiVersion: image.openshift.io/v1
+kind: ImageStream
+metadata:
+  name: autonomous-cfo
+---
+apiVersion: build.openshift.io/v1
+kind: BuildConfig
+metadata:
+  name: autonomous-cfo
+spec:
+  source:
+    type: Binary
+    binary: {}
+  strategy:
+    type: Docker
+    dockerStrategy: {}
+  output:
+    to:
+      kind: ImageStreamTag
+      name: autonomous-cfo:agent
+  triggers: []

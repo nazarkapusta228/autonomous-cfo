@@ -1,0 +1,67 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: cfo-postgres-data
+spec:
+  accessModes: [ReadWriteOnce]
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cfo-postgres
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels: {app: cfo-postgres}
+  template:
+    metadata:
+      labels: {app: cfo-postgres}
+    spec:
+      automountServiceAccountToken: false
+      containers:
+        - name: postgres
+          image: registry.redhat.io/rhel9/postgresql-16:1
+          env:
+            - {name: POSTGRESQL_USER, value: cfo}
+            - {name: POSTGRESQL_DATABASE, value: cfo}
+            - name: POSTGRESQL_PASSWORD
+              valueFrom:
+                secretKeyRef: {name: cfo-settings, key: POSTGRESQL_PASSWORD}
+          ports:
+            - {name: postgres, containerPort: 5432}
+          resources:
+            requests: {cpu: 100m, memory: 128Mi}
+            limits: {cpu: "1", memory: 512Mi}
+          readinessProbe:
+            exec: {command: [pg_isready, -h, "127.0.0.1", -U, cfo, -d, cfo]}
+            periodSeconds: 5
+          volumeMounts:
+            - {name: data, mountPath: /var/lib/pgsql/data}
+      volumes:
+        - name: data
+          persistentVolumeClaim: {claimName: cfo-postgres-data}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: cfo-postgres
+spec:
+  selector: {app: cfo-postgres}
+  ports:
+    - {name: postgres, port: 5432, targetPort: postgres}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: cfo-postgres-internal
+spec:
+  podSelector: {matchLabels: {app: cfo-postgres}}
+  policyTypes: [Ingress]
+  ingress:
+    - from: [{podSelector: {}}]
+      ports: [{port: 5432, protocol: TCP}]

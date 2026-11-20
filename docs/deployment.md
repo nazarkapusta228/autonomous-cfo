@@ -1,41 +1,81 @@
-# Розгортання
+# Середовище команди в OpenShift AI
 
-## Передумови
+У проєкті `autonomous-cfo` працюють KServe InferenceService `cfo-qwen` (Qwen2.5-7B-Instruct,
+vLLM, NVIDIA L4) і PostgreSQL 16 `cfo-postgres` із PVC. Образ Python 3.12 для
+агентів збирається в ImageStream `autonomous-cfo:agent`. Обидва агенти доступні як
+Python API та як команди в цьому образі. Власник UI може використати той самий
+образ і Secret `cfo-settings` для свого Deployment.
 
-Потрібні доступ до OpenShift команди, registry, PostgreSQL у кластері та модель
-в OpenShift AI Model Serving. GPU потрібен моделі, не Streamlit-контейнеру.
-У матеріалах немає достатньої інформації для готового маніфесту model serving:
-runtime, GPU, storage URI, service account і спосіб авторизації уточнюються в кластері.
-Не застосовуйте навмання InferenceService від іншої версії OpenShift AI.
+Для команд нижче увійдіть через `oc login` у кластер команди. Скопіювати команду
+входу можна з вебконсолі. Виконуйте команди з кореня репозиторію.
 
-Qwen2.5-7B-Instruct через vLLM — початковий кандидат. Перевірте доступну VRAM,
-довжину контексту й підтримку JSON schema обраним runtime.
-LLM_BASE_URL має містити `/v1`, LLM_MODEL — фактичне ім'я served model.
-Обидва агенти використовують ті самі налаштування. Клієнт не вимикає TLS verification.
+```sh
+oc project autonomous-cfo
+oc get isvc cfo-qwen
+oc get pod,pvc,svc
+oc create -f deploy/openshift/agent-run.yaml
+```
 
-## Застосунок
+Остання команда запускає **один** агентний аналіз демовиписки. Вивід доступний через
+`oc logs -f job/<видана-назва>`. Рекомендація зберігається в PostgreSQL. Повтор
+після збою того самого Job використовує той самий UUID. Новий Job створює новий аналіз.
 
-1. Зібрати й завантажити Dockerfile у доступний кластеру registry.
-2. Створити PostgreSQL через доступний у кластері operator/template із persistent
-   volume та Secret. Локальний compose.yaml не є кластерним розгортанням БД.
-3. Застосувати `sql/001_initial.sql` до цільової БД.
-4. Створити Secret `cfo-settings` із DATABASE_URL, LLM_BASE_URL, LLM_MODEL, LLM_API_KEY.
-   Зберігати секрети поза Git; для DATABASE_URL потрібні окремі кластерні credentials.
-5. Замінити `IMAGE_REPLACE_BEFORE_DEPLOY` у маніфесті на опублікований image digest.
-6. `oc apply -f deploy/openshift/app.yaml` у namespace команди.
-7. Перевірити rollout, Route, health endpoint і реальний запит до моделі.
+У кластері endpoint — `http://cfo-qwen-predictor:8080/v1` у проєкті
+`autonomous-cfo`, served model — `Qwen/Qwen2.5-7B-Instruct`. Адреса використовує
+порт процесу vLLM: predictor Service є headless. Кластерний пароль БД зберігається
+в Secret. Для фінального UI доступний окремий шаблон `app.yaml`: команді UI потрібно
+підставити digest образу зі своїм інтерфейсом і застосувати його, щоб відкрити Route.
 
-Deployment підтримує non-root UID OpenShift, Service відкриває 8501,
-Route завершує TLS і перенаправляє HTTP на HTTPS. Readiness перевіряє процес
-Streamlit; це не перевірка доступності моделі або БД.
+## Локальний PyCharm із тією самою моделлю
 
-Це шаблон першого етапу. Поки UI не викликає агентів, саме розгортання dashboard
-ще не демонструє обов'язкове використання LLM. Немає автентифікації, тому публічне
-демо допускає лише синтетичний приклад; для робочих даних потрібен контроль доступу.
+Після входу в кластер залиште цей процес у відкритому терміналі:
 
-## Першоджерела
+```sh
+oc -n autonomous-cfo port-forward --address=127.0.0.1 deployment/cfo-qwen-predictor 18481:8080
+```
 
-- https://docs.streamlit.io/deploy/tutorials/docker
-- https://docs.vllm.ai/en/latest/features/structured_outputs/
-- https://huggingface.co/Qwen/Qwen2.5-7B-Instruct
-- https://docs.redhat.com/en/documentation/red_hat_openshift_ai_self-managed/3.5
+У локальному `.env` використайте `LLM_BASE_URL=http://127.0.0.1:18481/v1`
+і значення `LLM_MODEL` з прикладу. `DATABASE_URL` з `.env.example` веде на локальну
+БД з Compose. У PyCharm оберіть модуль `cfo.cli`, аргументи `run liquidity` або
+`run investment`. Погодження та перегляд працюють у тій БД, яка налаштована для цього запуску.
+
+## Відтворення розгортання
+
+1. Застосуйте `deploy/openshift/project.yaml`, оберіть проєкт і застосуйте `qwen.yaml`.
+   Маніфест використовує Red Hat modelcar для Qwen та встановлену в командному кластері версію
+   vLLM. Для нього потрібен один вільний GPU. Наша конфігурація використовує контекст 4096.
+2. Створіть нові реквізити для порожньої БД через
+   `python scripts/create_settings.py --namespace autonomous-cfo` (потрібен kubectl).
+   Secret створюють один раз. Для наявного PVC зберігайте відповідний йому пароль.
+3. Застосуйте `postgres.yaml`. Після готовності PostgreSQL накладіть міграції:
+
+   ```sh
+   oc rollout status deployment/cfo-postgres
+   for f in sql/*.sql; do
+     oc exec -i deployment/cfo-postgres -- sh -c 'PGPASSWORD="$POSTGRESQL_PASSWORD" psql -v ON_ERROR_STOP=1 -h 127.0.0.1 -U cfo -d cfo' < "$f" || break
+   done
+   ```
+
+4. Застосуйте BuildConfig та зберіть вихідні файли у внутрішній registry.
+   Архів використовує відстежувані Git-файли з останнього коміту робочої гілки.
+
+   ```sh
+   oc apply -f deploy/openshift/build.yaml
+   git archive -o /tmp/cfo-build.tar.gz HEAD Dockerfile pyproject.toml app.py .streamlit/config.toml src/cfo data/sample
+   oc start-build autonomous-cfo --from-archive=/tmp/cfo-build.tar.gz --follow
+   oc create -f deploy/openshift/agent-run.yaml
+   ```
+
+## Спільний GPU
+
+Для запуску Qwen демосервіс `my-first-model/llama-32-3b-instruct` призупинено через
+анотацію KServe. Обидві моделі зберігають свої конфігурації. Якщо команда пізніше
+вирішить повернути GPU демомоделі:
+
+```sh
+oc -n autonomous-cfo annotate isvc cfo-qwen serving.kserve.io/stop=true --overwrite
+oc -n my-first-model annotate isvc llama-32-3b-instruct serving.kserve.io/stop=false --overwrite
+```
+
+Кластер одночасно обслуговує одну з цих моделей. [Картка Qwen](https://huggingface.co/Qwen/Qwen2.5-7B-Instruct),
+[Red Hat OpenShift AI Model Serving](https://docs.redhat.com/en/documentation/red_hat_openshift_ai_self-managed/3.5/html/deploying_models/index).
