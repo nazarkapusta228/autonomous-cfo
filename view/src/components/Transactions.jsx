@@ -250,7 +250,7 @@ export default function Transactions() {
           </tbody>
         </table>
         {pages > 1 && (
-          <nav aria-label={tr("Payment pages")} className="controls">
+          <nav aria-label={tr("Payment pages")} className="controls pagination">
             <button
               className="btn btn-ghost"
               disabled={!current}

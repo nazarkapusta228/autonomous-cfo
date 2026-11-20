@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { X } from 'lucide-react';
 import { usePreferences } from '../context/Preferences';
 import { Profile } from './Settings';
@@ -23,6 +23,25 @@ export default function Header({ title, subtitle }) {
   const panel = useRef(null);
   const trigger = useRef(null);
   const close = () => { setMode(null); trigger.current?.focus(); };
+
+  useLayoutEffect(() => {
+    if (!mode) return;
+    const anchor = panel.current;
+    function measure() {
+      const available = window.innerHeight - anchor.getBoundingClientRect().bottom - 6;
+      anchor.style.setProperty('--profile-height', Math.max(0, available) + 'px');
+    }
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(anchor.closest('.header'));
+    window.addEventListener('resize', measure);
+    window.addEventListener('scroll', measure, true);
+    return () => {
+      observer.disconnect();
+      window.removeEventListener('resize', measure);
+      window.removeEventListener('scroll', measure, true);
+    };
+  }, [mode]);
 
   useEffect(() => {
     if (!mode) return;

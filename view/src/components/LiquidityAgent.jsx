@@ -1,6 +1,7 @@
 import { usePreferences } from '../context/Preferences';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useApp } from '../context/AppContext';
+import { api } from '../lib/api';
 import DateField from './DateField';
 import BalanceChart from './BalanceChart';
 import RecommendationCard from './RecommendationCard';
@@ -133,6 +134,36 @@ function FlowTable({ flows, risk = false, showSource = false }) {
   );
 }
 
+function ForecastChart({ revision }) {
+  const { t, money } = usePreferences();
+  const [quarters, setQuarters] = useState(1);
+  const [result, setResult] = useState(null);
+  const [attempt, setAttempt] = useState(0);
+  useEffect(() => {
+    let active = true;
+    api('forecast/chart?' + new URLSearchParams({ revision, quarters }))
+      .then(forecast => { if (active) setResult({ quarters, forecast }); })
+      .catch(() => { if (active) setResult({ quarters, failed: true }); });
+    return () => { active = false; };
+  }, [revision, quarters, attempt]);
+  const current = result?.quarters === quarters ? result : null;
+  const f = current?.forecast;
+  return <section className="card">
+    <h3>{t('Cash balance forecast')}</h3>
+    <div className="controls quarter-picker" role="group" aria-label={t('Forecast period', 'Okres prognozy')}>
+      {[1, 2, 3, 4].map(n => <button key={n} className="btn btn-ghost" aria-pressed={quarters === n}
+        onClick={() => setQuarters(n)}>{n} {n === 1 ? t('quarter', 'kwartał') : t('quarters', 'kwartały')}</button>)}
+    </div>
+    {f ? <>
+      <p className="card-sub">{f.as_of} – {f.daily_balances.at(-1).day} · {t('Reserve')} {money(f.reserve)} ·
+        {' '}{t('Lowest projected cash')} {money(f.minimum_balance)} ({f.minimum_on})</p>
+      <BalanceChart neutral points={[{ day: f.as_of, balance: f.opening_balance }, ...f.daily_balances]} reserve={f.reserve}/>
+    </> : current?.failed ? <p role="alert">{t('Forecast unavailable.', 'Prognoza niedostępna.')} <button className="btn btn-ghost"
+      onClick={() => { setResult(null); setAttempt(previous => previous + 1); }}>{t('Retry')}</button></p>
+      : <p role="status">{t('Loading forecast…', 'Wczytywanie prognozy…')}</p>}
+  </section>;
+}
+
 export default function LiquidityAgent() {
   const { t: tr, money: eur } = usePreferences();
   const { state } = useApp();
@@ -147,16 +178,7 @@ export default function LiquidityAgent() {
           <div className="card-title">{tr("Liquidity decision")}</div>
           <RecommendationCard role="liquidity" />
         </section>
-        <section className="card">
-          <div className="card-title">{tr("Forecast ·")} {state.settings.horizon_days} {tr("days")}</div>
-          <p className="card-sub"> {tr("Daily closing balance. Reserve")} {eur(f.reserve)}{tr(". Minimum")} {eur(f.minimum_balance)}{' '} {tr("on")} {f.minimum_on}.
-          </p>
-          <BalanceChart
-            neutral
-            points={[{ day: f.as_of, balance: f.opening_balance }, ...f.daily_balances]}
-            reserve={f.reserve}
-          />
-        </section>
+        <ForecastChart key={state.revision} revision={state.revision} />
       </div>
       <section className="card mb-4">
         <div className="card-title">{tr("Payments at risk")}</div>

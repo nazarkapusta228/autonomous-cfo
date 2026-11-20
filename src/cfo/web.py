@@ -1,6 +1,7 @@
 """Same-origin React dashboard and PostgreSQL-backed CFO API."""
 
 import os
+from calendar import monthrange
 from collections.abc import Iterator
 from contextlib import contextmanager
 from datetime import date
@@ -11,7 +12,7 @@ from uuid import UUID
 
 import httpx
 import psycopg
-from fastapi import FastAPI, HTTPException, Request, Response
+from fastapi import FastAPI, HTTPException, Query, Request, Response
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 from psycopg.types.json import Jsonb
@@ -163,6 +164,18 @@ def workspace(request: Request, response: Response):
             )
             row = ws.lookup(conn, key)
         return ws.snapshot(conn, dsn, row)
+
+
+@app.get("/api/forecast/chart")
+def forecast_chart(request: Request, revision: UUID, quarters: Annotated[int, Query(ge=1, le=4)]):
+    with current(request, revision) as (_, dsn, row):
+        start = date.fromisoformat(row["settings"]["as_of"])
+        years, month = divmod(start.month - 1 + quarters * 3, 12)
+        year = start.year + years
+        last_day = monthrange(year, month + 1)[1]
+        end = date(year, month + 1, min(start.day, last_day))
+        settings = dict(row["settings"], horizon_days=(end - start).days)
+        return ws.analyse(dsn, dict(row, settings=settings)).forecast
 
 
 @app.post("/api/forecast")

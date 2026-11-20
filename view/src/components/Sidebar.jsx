@@ -18,7 +18,7 @@ export default function Sidebar({ active, onNavigate }) {
     <aside className="sidebar">
       <div className="sidebar-brand">
         <h1>Autonomous CFO</h1>
-        <p>Commerzbank · RedHat Collabothon 2026</p>
+        <p>RedHat Collabothon 2026</p>
       </div>
       <nav className="sidebar-nav">
         {NAV.map((n) => {
