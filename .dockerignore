@@ -9,3 +9,5 @@ __pycache__
 tests
 data/private
 .streamlit/secrets.toml
+**/node_modules
+view/dist

@@ -12,12 +12,16 @@ spec:
       labels:
         app: autonomous-cfo
     spec:
+      automountServiceAccountToken: false
       containers:
         - name: app
           image: IMAGE_REPLACE_BEFORE_DEPLOY
           ports:
-            - containerPort: 8501
+            - containerPort: 8080
               name: http
+          env:
+            - name: CFO_SECURE_COOKIE
+              value: "1"
           envFrom:
             - secretRef:
                 name: cfo-settings
@@ -37,11 +41,11 @@ spec:
               type: RuntimeDefault
           readinessProbe:
             httpGet:
-              path: /_stcore/health
+              path: /api/ready
               port: http
           livenessProbe:
             httpGet:
-              path: /_stcore/health
+              path: /api/live
               port: http
             initialDelaySeconds: 30
 ---
@@ -54,13 +58,15 @@ spec:
     app: autonomous-cfo
   ports:
     - name: http
-      port: 8501
+      port: 8080
       targetPort: http
 ---
 apiVersion: route.openshift.io/v1
 kind: Route
 metadata:
   name: autonomous-cfo
+  annotations:
+    haproxy.router.openshift.io/timeout: 120s
 spec:
   to:
     kind: Service

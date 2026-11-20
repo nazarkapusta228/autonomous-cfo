@@ -1,4 +1,4 @@
-name: Python checks
+name: CFO checks
 on: [push, pull_request]
 jobs:
   test:
@@ -23,4 +23,11 @@ jobs:
           python-version: '3.12'
       - run: pip install -e '.[dev]'
       - run: ruff check .
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: view/package-lock.json
+      - run: npm ci --prefix view
+      - run: npm run build --prefix view
       - run: pytest -q

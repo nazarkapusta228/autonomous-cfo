@@ -10,12 +10,32 @@ import InvestmentAgent from './components/InvestmentAgent';
 import Transactions from './components/Transactions';
 
 const PAGES = {
-  dashboard: { title: 'Financial Overview', subtitle: 'Real-time monitoring · Pizzeria Amalfi GmbH', component: Dashboard },
-  liquidity: { title: 'Liquidity Agent', subtitle: 'Cash flow forecasting & credit facilities', component: LiquidityAgent },
-  fx: { title: 'FX Hedging Agent', subtitle: 'Currency risk & Commerzbank hedge structuring', component: FXAgent },
-  tax: { title: 'Tax Agent', subtitle: 'Advance payments & optimization', component: TaxAgent },
-  investment: { title: 'Investment Agent', subtitle: 'Idle liquidity deployment', component: InvestmentAgent },
-  transactions: { title: 'Transactions', subtitle: 'All account activity', component: Transactions }
+  dashboard: {
+    title: 'Financial Overview',
+    subtitle: 'Cash position and approval history',
+    component: Dashboard,
+  },
+  liquidity: {
+    title: 'Liquidity Agent',
+    subtitle: 'Cash flow forecasting & credit facilities',
+    component: LiquidityAgent,
+  },
+  fx: {
+    title: 'FX Hedging',
+    subtitle: 'Booked CHF payments and forward simulation',
+    component: FXAgent,
+  },
+  tax: { title: 'Tax planning', subtitle: 'Advance payments & optimization', component: TaxAgent },
+  investment: {
+    title: 'Investment Agent',
+    subtitle: 'Idle liquidity deployment',
+    component: InvestmentAgent,
+  },
+  transactions: {
+    title: 'Transactions',
+    subtitle: 'All account activity',
+    component: Transactions,
+  },
 };
 
 export default function App() {

@@ -8,10 +8,10 @@ export default function Header({ title, subtitle }) {
         <div className="subtitle">{subtitle}</div>
       </div>
       <div className="user-chip">
-        <div className="user-avatar">VA</div>
+        <div className="user-avatar">CF</div>
         <div>
-          <span>Vincenzo Amalfi</span>
-          <small>Owner · Pizzeria Amalfi GmbH</small>
+          <span>Workspace owner</span>
+          <small>CFO dashboard</small>
         </div>
       </div>
     </header>

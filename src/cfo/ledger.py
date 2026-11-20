@@ -6,6 +6,7 @@ import json
 import re
 from collections import defaultdict
 from collections.abc import Iterable, Mapping
+from contextlib import nullcontext
 from dataclasses import dataclass
 from datetime import date, timedelta
 from decimal import Decimal
@@ -14,7 +15,7 @@ from math import ceil
 from statistics import median
 
 import psycopg
-from psycopg.rows import dict_row
+from psycopg.rows import dict_row, tuple_row
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from cfo.models import Money, PlannedCashFlow, Transaction
@@ -280,10 +281,11 @@ def save_category(
         )
         if apply_after:
             conn.execute(
-                "INSERT INTO category_rules(account,kind,effective_after,category) "
-                "VALUES (%s,%s,%s,%s) ON CONFLICT (account,kind,effective_after) "
+                "INSERT INTO category_rules(account,kind,effective_after,category,scope) "
+                "SELECT %s,%s,%s,%s,scope FROM statement_imports WHERE id=%s "
+                "ON CONFLICT (scope,account,kind,effective_after) "
                 "DO UPDATE SET category = excluded.category",
-                (account, kind, apply_after, category),
+                (account, kind, apply_after, category, import_id),
             )
 
 
@@ -300,8 +302,9 @@ def load_categories(database_url: str, import_id: int) -> tuple[dict[int, str], 
             CategoryRule(*r)
             for r in conn.execute(
                 "SELECT account,kind,effective_after,category FROM category_rules "
-                "WHERE account IN (SELECT account FROM transactions WHERE import_id=%s)",
-                (import_id,),
+                "WHERE scope=(SELECT scope FROM statement_imports WHERE id=%s) "
+                "AND account IN (SELECT account FROM transactions WHERE import_id=%s)",
+                (import_id, import_id),
             )
         ]
     return overrides, rules
@@ -340,15 +343,17 @@ def save_invoice_decision(
     source_row: int | None,
     *,
     as_of: date,
+    conn: psycopg.Connection | None = None,
 ) -> None:
     """Accept a candidate or mark it outstanding, binding decisions to this cutoff and input."""
     digest = _invoice_digest(invoices, as_of)
-    with psycopg.connect(database_url) as conn:
-        if not conn.execute(
+    session = nullcontext(conn) if conn is not None else psycopg.connect(database_url)
+    with session as connection, connection.cursor(row_factory=tuple_row) as sql:
+        if not sql.execute(
             "SELECT id FROM statement_imports WHERE id=%s FOR UPDATE", (import_id,)
         ).fetchone():
             raise ValueError("Unknown statement import")
-        with conn.cursor(row_factory=dict_row) as cursor:
+        with connection.cursor(row_factory=dict_row) as cursor:
             cursor.execute(
                 "SELECT source_row, account, booked_on, value_on, kind, reference, "
                 "amount, currency, amount_eur FROM transactions WHERE import_id=%s "
@@ -357,7 +362,7 @@ def save_invoice_decision(
             )
             transactions = [Transaction.model_validate(row) for row in cursor]
         decisions = dict(
-            conn.execute(
+            sql.execute(
                 "SELECT invoice_id,source_row FROM invoice_match_decisions "
                 "WHERE import_id=%s AND invoice_digest=%s AND as_of=%s",
                 (import_id, digest, as_of),
@@ -370,7 +375,7 @@ def save_invoice_decision(
         candidates = report.ambiguous.get(invoice_id)
         if not candidates or (source_row is not None and source_row not in candidates):
             raise ValueError("This invoice has no such ambiguous settlement candidate")
-        conn.execute(
+        sql.execute(
             "INSERT INTO invoice_match_decisions "
             "(import_id,invoice_digest,as_of,invoice_id,source_row) VALUES (%s,%s,%s,%s,%s) "
             "ON CONFLICT (import_id,invoice_digest,as_of,invoice_id) "

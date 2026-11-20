@@ -1,54 +1,64 @@
-# autonomous-cfo
-AI-powered financial assistant for small businesses, built for Collabothon 2026 on Red Hat OpenShift AI.
+# Autonomous CFO
 
-## Стан реалізації
+React dashboard for the Collabothon Pizzeria Amalfi challenge. FastAPI serves the dashboard,
+runs the two Python agents and records decisions in PostgreSQL. Both agents call the same
+Qwen2.5-7B-Instruct model on OpenShift AI. Financial movements and filings are simulations.
 
-Dashboard показує історію. Прогноз, агенти Qwen, погодження та симуляція доступні через
-Python API і CLI. [Запуск та контракт для інтеграції](docs/agent-backend.md).
+## Run on OpenShift
 
-Стек: Python 3.12, Streamlit, Plotly, PostgreSQL 16, Psycopg 3, pandas,
-Decimal, Pydantic 2, HTTPX. Два звичайні Python-модулі звертаються до одного
-OpenAI-compatible endpoint моделі в OpenShift AI. Qwen2.5-7B-Instruct працює через
-vLLM на NVIDIA L4 у командному кластері. [Як запустити](docs/deployment.md).
+Open the team's `autonomous-cfo` HTTPS Route. The model, application and PostgreSQL run
+inside the cluster. [Deployment and rebuild commands](docs/deployment.md).
 
-## Локальний запуск
+## Run locally
 
-```bash
+From the repository root, with Python 3.12+, Node 22, Docker and access to the cluster:
+
+```sh
 python3.12 -m venv .venv
 source .venv/bin/activate
 pip install -e '.[dev]'
-cp .env.example .env
-streamlit run app.py
+cp -n .env.example .env
+docker compose up -d --wait db
+for f in sql/*.sql; do docker compose exec -T db psql -v ON_ERROR_STOP=1 -U cfo -d cfo < "$f" || break; done
+npm ci --prefix view
+npm run build --prefix view
+python -m uvicorn cfo.web:app --port 8080
 ```
 
-У PyCharm відкрийте цей репозиторій і виберіть `.venv/bin/python` як interpreter.
-Run configuration: module `streamlit`, arguments `run app.py`, working directory —
-корінь репозиторію. Історичний dashboard працює без БД та моделі.
+Open http://127.0.0.1:8080. For local Qwen requests, log into the team cluster and keep
+`oc -n autonomous-cfo port-forward deployment/cfo-qwen-predictor 18481:8080` running
+in another terminal. The forecast and ledger work while the model is offline.
+In PyCharm use module `uvicorn`, arguments `cfo.web:app --port 8080` and the repo root
+as the working directory. For live React edits run `npm run dev --prefix view` alongside
+FastAPI and open http://127.0.0.1:5173. API documentation is available at `/docs`.
 
-```bash
-docker compose up -d db
-pytest -q
+## Walk through the demo
+
+1. On Dashboard run the liquidity agent. The supplied assumptions give a shortfall of
+   €10,843.69 by 13 June 2025. Compare the two balance curves, then approve or reject.
+2. Under Liquidity Agent set the starting balance to €25,000 and run the forecast.
+   Under Investment run the second agent to see the operating cash, reserve and deposit
+   proposal. Changing the forecast creates a new decision context.
+3. Under Transactions inspect the bank history, filter categories, correct a payment or
+   resolve an ambiguous invoice. CSV uploads are under Liquidity Agent → Import CSV files.
+4. Under FX Hedging and Tax planning enter the terms of a simulation. Money market and
+   equipment finance enquiries are also available. The dashboard records each decision.
+
+Each browser receives an isolated demo workspace via an HTTP-only cookie. Keep that cookie
+to resume the same workspace. Use synthetic data in the public demo. The original Streamlit
+history viewer remains available for developers through the optional `legacy` dependencies.
+
+## Verification
+
+```sh
+TEST_DATABASE_URL=postgresql://cfo:cfo_local_only@localhost:5432/cfo pytest -q
 ruff check .
-docker build -t autonomous-cfo:dev .
-docker run --rm -p 8501:8501 autonomous-cfo:dev
+npm run build --prefix view
 ```
 
-Compose створює лише локальну БД. SQL виконується автоматично для нового volume;
-для вже наявної БД застосовуйте SQL-файли окремо через `psql` із `ON_ERROR_STOP=1`.
-Локальний пароль із Compose не призначений для розгортання.
+[Agent and CLI contract](docs/agent-backend.md) · [Forecast assumptions](docs/data-notes.md)
 
-## Файли та межі
-
-- `app.py`: завантаження CSV, історичний баланс і таблиця.
-- `src/cfo/ingestion.py`: перевірка CSV, EUR/CHF, Decimal.
-- `src/cfo/finance.py`: денні залишки та перевірки запропонованих сум.
-- `src/cfo/agents/`: ліквідність та інвестиції; приймають готовий прогноз.
-- `src/cfo/llm.py`: HTTP-клієнт і структурована відповідь Pydantic.
-- `src/cfo/db.py`: атомарний імпорт із захистом від повтору того самого файлу.
-- `sql/`: початкова схема транзакцій, рекомендацій та аудиту.
-- `deploy/openshift/`: шаблон Deployment, Service, HTTPS Route.
-- `tests/`: перевірки фактичного прикладу й фінансових обмежень.
-- `docs/`: рішення щодо архітектури, даних і розгортання.
-
-Залежності мають сумісні діапазони, ще не lock-файл. Перед командним релізом
-зафіксуйте перевірені версії на Python 3.12 та digest контейнерів.
+To run the interactive regression against a running app and Qwen endpoint, install Chromium
+with `(cd view && npx playwright install chromium)`, then run `npm run test:e2e --prefix view`.
+Set `CFO_URL` for an OpenShift Route or `BROWSER_CHANNEL=chrome` to use installed Chrome.
+The test creates its own isolated workspace and records simulated decisions.

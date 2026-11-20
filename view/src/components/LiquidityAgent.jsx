@@ -1,86 +1,171 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
-import { eur } from '../lib/forecast';
-import { DEMO } from '../lib/demo';
+import { eur } from '../lib/api';
+import BalanceChart from './BalanceChart';
 import RecommendationCard from './RecommendationCard';
-import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceLine, CartesianGrid } from 'recharts';
+
+function Inputs() {
+  const { state, busy, submit, setError } = useApp();
+  const [settings, setSettings] = useState(state.settings);
+  const [files, setFiles] = useState({});
+  const [remove, setRemove] = useState(false);
+  const fields = [
+    ['Cut-off date', 'as_of', 'date'],
+    ['Opening balance before first booking (€)', 'starting_balance', 'number'],
+    ['Safety reserve (€)', 'reserve', 'number'],
+    ['Forecast days', 'horizon_days', 'number'],
+  ];
+  async function run(e) {
+    e.preventDefault();
+    try {
+      const payload = { settings };
+      for (const [k, file] of Object.entries(files)) {
+        if (file) payload[k] = await file.text();
+      }
+      if (remove) payload.invoices = '';
+      await submit('forecast', payload);
+    } catch (error) {
+      setError(error.message);
+    }
+  }
+  return (
+    <form className="card mb-4" onSubmit={run}>
+      <div className="card-title">Forecast settings</div>
+      <div className="card-sub">
+        Opening balance is an assumption. Only payments booked and valued by the cut-off enter the
+        forecast.
+      </div>
+      <div className="controls">
+        {fields.map(([label, key, type]) => (
+          <label key={key}>
+            {label}
+            <input
+              type={type}
+              required
+              step={key === 'horizon_days' ? 1 : type === 'number' ? '.01' : undefined}
+              min={key === 'reserve' ? 0 : key === 'horizon_days' ? 1 : undefined}
+              max={key === 'horizon_days' ? 366 : undefined}
+              value={settings[key]}
+              onChange={(e) => setSettings({ ...settings, [key]: e.target.value })}
+            />
+          </label>
+        ))}
+      </div>
+      <details className="section">
+        <summary>Import CSV files</summary>
+        <p>
+          Keep a field empty to reuse its current file. The initial workspace uses the Pizzeria
+          Amalfi sample.
+        </p>
+        <div className="controls">
+          {[
+            ['statement', 'Bank statement'],
+            ['plan', 'Cash flow plan'],
+            ['invoices', 'Invoices'],
+          ].map(([k, label]) => (
+            <label key={k}>
+              {label}
+              <input
+                type="file"
+                accept=".csv,text/csv"
+                disabled={k === 'invoices' && remove}
+                onChange={(e) => setFiles({ ...files, [k]: e.target.files[0] })}
+              />
+            </label>
+          ))}
+        </div>
+        {state.has_invoices && (
+          <label>
+            <input type="checkbox" checked={remove} onChange={(e) => setRemove(e.target.checked)} />{' '}
+            Remove imported invoices
+          </label>
+        )}
+        <p>
+          Plan: date,category,amount_eur,description (optional invoice_id). Invoices:
+          invoice_id;counterparty;issued_on;due_on;amount_eur. Use ISO dates and signed EUR amounts.
+        </p>
+      </details>
+      <button className="btn btn-primary" disabled={busy}>
+        {busy ? 'Working…' : 'Run forecast'}
+      </button>
+    </form>
+  );
+}
 
 export default function LiquidityAgent() {
-  const { forecast: fc, rec, setRec, loading, error, run } = useApp();
-  const [asOf, setAsOf] = useState(DEMO.asOf);
-  const [reserve, setReserve] = useState(0);
-
-  const data = useMemo(() => fc && [
-    { date: fc.asOf, balance: fc.openingCents / 100 },            // last known (history) point
-    ...fc.points.map((p) => ({ date: p.date, balance: p.balance / 100 })),
-  ], [fc]);
-
-  const onRun = () => run({ asOf, reserveCents: Math.round(Number(reserve || 0) * 100) });
-
+  const { state } = useApp();
+  const a = state.analysis,
+    f = a.forecast;
   return (
-    <div>
-      <div className="card mb-4">
-        <div className="card-title">Forecast settings</div>
-        <div className="card-sub">Planned amounts after the cut-off date are assumptions, not bank data.</div>
-        <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'center' }}>
-          <label className="text-muted">Cut-off date <input type="date" value={asOf} onChange={(e) => setAsOf(e.target.value)} /></label>
-          <label className="text-muted">Safety reserve (€) <input type="number" min="0" step="100" value={reserve} onChange={(e) => setReserve(e.target.value)} style={{ width: 110 }} /></label>
-          <button className="btn btn-primary" onClick={onRun} disabled={loading}>{loading ? 'Calculating…' : 'Run forecast'}</button>
-        </div>
-        {error && <p className="amount-neg" role="alert" style={{ marginTop: 12 }}>{error} <button className="btn btn-ghost" onClick={onRun}>Try again</button></p>}
+    <>
+      <Inputs key={state.revision} />
+      <div className="grid-2">
+        <section className="card">
+          <div className="card-title">Forecast · {state.settings.horizon_days} days</div>
+          <p className="card-sub">
+            Daily closing balance in EUR. Reserve {eur(f.reserve)}. Minimum {eur(f.minimum_balance)}{' '}
+            on {f.minimum_on}.
+          </p>
+          <BalanceChart
+            points={[{ day: f.as_of, balance: f.opening_balance }, ...f.daily_balances]}
+            reserve={f.reserve}
+          />
+        </section>
+        <section className="card">
+          <div className="card-title">Liquidity decision</div>
+          <RecommendationCard role="liquidity" />
+        </section>
       </div>
-
-      {!fc && !error && <div className="card">Loading demo scenario…</div>}
-
-      {fc && (
-        <div className="grid-2 mb-4">
-          <div className="card">
-            <div className="card-title">Cash flow forecast · 45 days</div>
-            <div className="card-sub">Opening balance {eur(fc.openingCents)} on {fc.asOf}. Left of the line: bank history. Right: forecast.</div>
-            <div className="chart-wrap">
-              <ResponsiveContainer>
-                <AreaChart data={data} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
-                  <defs><linearGradient id="balGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#ffcc00" stopOpacity={0.35} /><stop offset="100%" stopColor="#ffcc00" stopOpacity={0} /></linearGradient></defs>
-                  <CartesianGrid stroke="#24305a" strokeDasharray="3 3" />
-                  <XAxis dataKey="date" tick={{ fill: '#8a96c0', fontSize: 11 }} tickFormatter={(d) => d.slice(5)} minTickGap={24} />
-                  <YAxis tick={{ fill: '#8a96c0', fontSize: 11 }} tickFormatter={(v) => `€${(v / 1000).toFixed(1)}k`} />
-                  <Tooltip contentStyle={{ background: '#172042', border: '1px solid #24305a', borderRadius: 8 }} formatter={(v) => [eur(Math.round(v * 100)), 'Balance']} />
-                  <ReferenceLine y={0} stroke="#ff6b6b" strokeDasharray="4 4" />
-                  <ReferenceLine x={fc.asOf} stroke="#8a96c0" label={{ value: 'Cut-off', fill: '#8a96c0', fontSize: 11 }} />
-                  {fc.firstNegative && <ReferenceLine x={fc.firstNegative} stroke="#ff6b6b" label={{ value: 'First deficit', fill: '#ff6b6b', fontSize: 11 }} />}
-                  <Area type="monotone" dataKey="balance" stroke="#ffcc00" strokeWidth={2} fill="url(#balGrad)" />
-                </AreaChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
-
-          <div className="card">
-            <div className="card-title">What the agent found</div>
-            <div className="card-sub">Analysis and recommendation are automatic. Your approval is required.</div>
-            {rec ? <RecommendationCard rec={rec} forecast={fc} onChange={setRec} /> : <p className="text-muted">Preparing recommendation…</p>}
-          </div>
-        </div>
-      )}
-
-      {fc && (
-        <div className="card mb-4">
-          <div className="card-title">Planned payments and income</div>
-          <div className="card-sub">Lowest balance {eur(fc.minBalance)} on {fc.minDate}</div>
-          <table className="table">
-            <thead><tr><th>Date</th><th>Income</th><th>Payments</th><th>Balance after</th></tr></thead>
-            <tbody>
-              {fc.points.filter((p) => p.inflow || p.outflow).map((p) => (
-                <tr key={p.date}>
-                  <td className="mono">{p.date}</td>
-                  <td className="amount-pos">{p.inflow ? eur(p.inflow) : ''}</td>
-                  <td className="amount-neg">{p.outflow ? eur(p.outflow) : ''}</td>
-                  <td className={p.balance < 0 ? 'amount-neg' : ''}>{eur(p.balance)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
-    </div>
+      <section className="card mb-4">
+        <div className="card-title">Payments at risk</div>
+        {a.payments_at_risk.length ? (
+          a.payments_at_risk.map((p, i) => (
+            <p key={i}>
+              {p.date} · {p.description} · {eur(p.amount_eur)}
+            </p>
+          ))
+        ) : (
+          <p>No payments below the reserve.</p>
+        )}
+        {f.drivers.length > 0 && (
+          <details className="section">
+            <summary>Payments driving the shortfall</summary>
+            {f.drivers.map((d, i) => (
+              <p key={i}>
+                {d.date} · {d.description} · {eur(d.amount_eur)}
+              </p>
+            ))}
+          </details>
+        )}
+        {a.receipt_delays.map((p) => (
+          <p key={p.invoice_id}>
+            Receipt {p.invoice_id} · Due {p.due_on} · Expected {p.expected_on} · {eur(p.amount_eur)}
+          </p>
+        ))}
+      </section>
+      <section className="card">
+        <div className="card-title">Planned payments and income</div>
+        <table className="table">
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Description</th>
+              <th>Category</th>
+              <th>Amount</th>
+            </tr>
+          </thead>
+          <tbody>
+            {a.plan.map((p, i) => (
+              <tr key={i}>
+                <td>{p.date}</td>
+                <td>{p.description}</td>
+                <td>{p.category}</td>
+                <td>{eur(p.amount_eur)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </section>
+    </>
   );
 }

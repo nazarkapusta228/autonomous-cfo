@@ -15,6 +15,7 @@ class Transaction(BaseModel):
     booked_on: date
     value_on: date
     kind: str
+    counterparty: str = ""
     reference: str
     amount: Money
     currency: Literal["EUR", "CHF"]

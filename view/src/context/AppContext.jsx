@@ -1,46 +1,71 @@
-import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
+import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
 import { api } from '../lib/api';
 
 const AppContext = createContext();
 
 export function AppProvider({ children }) {
-  const [actions, setActions] = useState([]);
-  const [toast, setToast] = useState(null);
-  const [forecast, setForecast] = useState(null);
-  const [rec, setRec] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
-  const [health, setHealth] = useState(null);
+  const [state, setState] = useState(null);
+  const [health, setHealth] = useState({});
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const active = useRef(false);
+  const initial = useRef(null);
 
-  const showToast = useCallback((msg, kind = 'success') => {
-    setToast({ msg, kind, id: Date.now() });
-    setTimeout(() => setToast(null), 3500);
-  }, []);
-
-  const logAction = useCallback((action) => {
-    setActions((prev) => [...prev, { ...action, id: Date.now(), timestamp: new Date().toISOString() }]);
-  }, []);
-
-  // One forecast + one recommendation, shared by Dashboard and Liquidity (single source of truth).
-  const run = useCallback(async (opts) => {
-    setLoading(true); setError(null);
+  function refreshHealth() {
+    api('health')
+      .then(setHealth)
+      .catch(() => setHealth({}));
+  }
+  async function refresh() {
+    setError('');
     try {
-      const fc = await api.runForecast(opts);
-      setForecast(fc);
-      setRec(await api.getRecommendation(fc));
-    } catch {
-      setError('Could not calculate the forecast. Check your connection and try again.');
-    } finally { setLoading(false); }
+      setState(await api('workspace'));
+    } catch (e) {
+      setError(e.message);
+    }
+    refreshHealth();
+  }
+  useEffect(() => {
+    if (!initial.current) initial.current = refresh();
   }, []);
 
-  useEffect(() => { run(); api.health().then(setHealth).catch(() => setHealth(null)); }, [run]);
+  async function submit(path, fields = {}, reload = true) {
+    if (active.current) return null;
+    active.current = true;
+    setBusy(true);
+    setError('');
+    try {
+      const result = await api(path, { ...fields, revision: state.revision });
+      if (reload) setState(await api('workspace'));
+      return result;
+    } catch (e) {
+      if (e.status === 409) await refresh();
+      setError(e.message);
+      return null;
+    } finally {
+      active.current = false;
+      setBusy(false);
+    }
+  }
 
   return (
-    <AppContext.Provider value={{ actions, logAction, toast, showToast, forecast, rec, setRec, loading, error, run, health }}>
-      {children}
-      {toast && <div className={`toast ${toast.kind === 'error' ? 'error' : toast.kind === 'warn' ? 'warn' : ''}`}>{toast.msg}</div>}
+    <AppContext.Provider value={{ state, health, busy, submit, refresh, refreshHealth, setError }}>
+      {state ? (
+        children
+      ) : (
+        <div className="card">
+          {error || 'Loading workspace…'} {error && <button onClick={refresh}>Retry</button>}
+        </div>
+      )}
+      {state && error && (
+        <div role="alert" className="toast error">
+          {error}{' '}
+          <button className="btn btn-ghost" onClick={() => setError('')}>
+            Dismiss
+          </button>
+        </div>
+      )}
     </AppContext.Provider>
   );
 }
-
 export const useApp = () => useContext(AppContext);

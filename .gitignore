@@ -13,3 +13,5 @@ build/
 dist/
 .streamlit/secrets.toml
 data/private/
+
+node_modules/

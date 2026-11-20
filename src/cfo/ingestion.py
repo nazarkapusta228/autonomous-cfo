@@ -56,6 +56,7 @@ def parse_statement(content: bytes) -> list[Transaction]:
                     booked_on=datetime.strptime(row["Booking Date"], "%d.%m.%y").date(),
                     value_on=datetime.strptime(row["Value Date"], "%d.%m.%y").date(),
                     kind=row["Transaction Type"],
+                    counterparty=row.get("Beneficiary/Payer", ""),
                     reference=row["Payment Reference"],
                     amount=amount,
                     currency=currency,

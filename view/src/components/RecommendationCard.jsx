@@ -1,46 +1,143 @@
 import React, { useState } from 'react';
-import { api } from '../lib/api';
-import { eur } from '../lib/forecast';
+import { useApp } from '../context/AppContext';
+import { eur, nextDay } from '../lib/api';
+import BalanceChart from './BalanceChart';
 
-// Owner sees 3 things at once: WHEN money runs out, HOW MUCH is needed, WHY. Then decides.
-export default function RecommendationCard({ rec, forecast, onChange }) {
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState(null);
-  const stale = rec.forecastId !== forecast.id; // inputs changed -> this decision no longer applies
+const labels = {
+  hold: 'Hold cash',
+  propose_credit: 'Bridge credit line',
+  propose_investment: 'Term deposit',
+};
 
-  const decide = async (kind) => {
-    if (busy) return;               // blocks double click
-    setBusy(true); setError(null);
-    try { onChange(await api[kind](rec.id)); }
-    catch { setError('Could not save your decision. Nothing was changed — try again.'); }
-    finally { setBusy(false); }
-  };
-
-  if (rec.action === 'hold') return <div className="rec-block"><h4>No action needed</h4><p>{rec.explanation}</p></div>;
-
+function Comparison({ role, proposal, fc }) {
+  const { busy, submit } = useApp();
+  const [date, setDate] = useState(
+    proposal.available_until || nextDay(fc.daily_balances.at(-1).day),
+  );
+  const [interest, setInterest] = useState('0.00');
+  const [comparison, setComparison] = useState(null);
+  async function compare(event) {
+    event.preventDefault();
+    const result = await submit(
+      'agents/' + role + '/comparison',
+      { terms: { settles_on: date, interest_eur: interest } },
+      false,
+    );
+    setComparison(result);
+  }
   return (
-    <div className="rec-block" aria-busy={busy}>
-      <div className="kpi-grid" style={{ gridTemplateColumns: 'repeat(3, 1fr)', marginBottom: 12 }}>
-        <div className="kpi"><div className="kpi-label">Cash runs out</div><div className="kpi-value" style={{ fontSize: 20 }}>{forecast.firstNegative ?? '—'}</div></div>
-        <div className="kpi"><div className="kpi-label">You need</div><div className="kpi-value" style={{ fontSize: 20 }}>{eur(rec.amount)}</div></div>
-        <div className="kpi"><div className="kpi-label">Needed by</div><div className="kpi-value" style={{ fontSize: 20 }}>{rec.neededBy}</div></div>
+    <details className="section">
+      <summary>Compare cash balances</summary>
+      <form className="controls" onSubmit={compare} onChange={() => setComparison(null)}>
+        <label>
+          Simulated settlement
+          <input
+            required
+            type="date"
+            min={nextDay(proposal.execute_on)}
+            max={proposal.available_until || undefined}
+            value={date}
+            onChange={(e) => setDate(e.target.value)}
+          />
+        </label>
+        <label>
+          Assumed interest (€)
+          <input
+            type="number"
+            step=".01"
+            min="0"
+            required
+            value={interest}
+            onChange={(e) => setInterest(e.target.value)}
+          />
+        </label>
+        <button disabled={busy} className="btn btn-ghost">
+          Compare scenarios
+        </button>
+      </form>
+      {comparison && (
+        <>
+          <p>
+            Baseline (yellow) and simulated balance (green). Principal outstanding at horizon end:{' '}
+            {eur(comparison.outstanding_principal)}.
+          </p>
+          <BalanceChart
+            points={comparison.baseline}
+            action={comparison.with_action}
+            reserve={fc.reserve}
+          />
+        </>
+      )}
+    </details>
+  );
+}
+
+export default function RecommendationCard({ role }) {
+  const { state, busy, submit } = useApp();
+  const saved = state.assessments[role];
+  const unresolved = Object.keys(state.analysis.reconciliation.ambiguous).length;
+  if (!saved)
+    return (
+      <div className="rec-block">
+        <p>
+          {unresolved
+            ? 'Resolve the invoice matches in Transactions first.'
+            : 'Ask Qwen to review the current forecast and explain a decision.'}
+        </p>
+        <button
+          className="btn btn-primary"
+          disabled={busy || !!unresolved}
+          onClick={() => submit('agents/' + role)}
+        >
+          {busy ? 'Working…' : 'Run ' + role + ' agent'}
+        </button>
       </div>
-      <h4>Why</h4>
-      <p>{rec.explanation}</p>
-      <ul>{forecast.drivers.map((d) => <li key={d.date + d.label}>{d.date} · {d.label} · {eur(d.cents)}</li>)}</ul>
-      {rec.risks.length > 0 && <p style={{ marginTop: 8, color: 'var(--text-muted)' }}>Risks: {rec.risks.join(' · ')}</p>}
-
-      {stale && <p className="amount-neg" role="alert">Inputs changed. Generate a new recommendation to decide.</p>}
-      {error && <p className="amount-neg" role="alert">{error}</p>}
-
-      {rec.status === 'pending' && !stale && (
+    );
+  const p = saved.recommendation;
+  return (
+    <div className="rec-block">
+      <h4>
+        {labels[p.action]} {p.product && '· ' + eur(p.amount)}
+      </h4>
+      {p.product && (
+        <p>
+          Effective {p.execute_on}
+          {p.available_until && ' · Available through ' + p.available_until}
+        </p>
+      )}
+      {role === 'investment' && (
+        <p>
+          Operations {eur(p.operating_cash)} · Reserve {eur(p.reserve_cash)} · Free cash{' '}
+          {eur(p.free_cash)}
+        </p>
+      )}
+      <p>{p.explanation}</p>
+      <ul>
+        {p.risks.map((r) => (
+          <li key={r}>{r}</li>
+        ))}
+      </ul>
+      <div className="badge badge-sim">
+        {saved.status.replace('_', ' ')}{' '}
+        {saved.application_id && ' · Request #' + saved.application_id}
+      </div>
+      {saved.status === 'pending' && (
         <div className="modal-actions">
-          <button className="btn btn-ghost" disabled={busy} onClick={() => decide('reject')}>Reject</button>
-          <button className="btn btn-primary" disabled={busy} onClick={() => decide('approve')}>{busy ? 'Saving…' : 'Approve (simulation)'}</button>
+          {['reject', 'approve'].map((c) => (
+            <button
+              key={c}
+              className={'btn ' + (c === 'approve' ? 'btn-primary' : 'btn-ghost')}
+              disabled={busy}
+              onClick={() => submit('agents/' + role + '/decision/' + c)}
+            >
+              {c === 'approve' ? 'Approve (simulation)' : 'Reject'}
+            </button>
+          ))}
         </div>
       )}
-      {rec.status === 'approved' && <p className="badge badge-approved">Approved · simulated request {rec.simulation?.requestNo}</p>}
-      {rec.status === 'rejected' && <p className="badge badge-sell">Rejected · saved to audit log</p>}
+      {p.product && (
+        <Comparison key={saved.id} role={role} proposal={p} fc={state.analysis.forecast} />
+      )}
     </div>
   );
 }

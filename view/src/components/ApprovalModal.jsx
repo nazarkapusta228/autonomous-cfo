@@ -1,9 +1,22 @@
 import React from 'react';
 
-export default function ApprovalModal({ title, description, onApprove, onCancel, confirmLabel }) {
+export default function ApprovalModal({
+  title,
+  description,
+  onApprove,
+  onCancel,
+  busy,
+  confirmLabel,
+}) {
   return (
     <div className="modal-backdrop" onClick={onCancel}>
-      <div className="modal" onClick={e => e.stopPropagation()}>
+      <div
+        className="modal"
+        role="dialog"
+        aria-modal="true"
+        aria-label={title}
+        onClick={(e) => e.stopPropagation()}
+      >
         <h3>{title}</h3>
         <p>{description}</p>
         <div className="rec-block" style={{ marginBottom: 0 }}>
@@ -14,8 +27,12 @@ export default function ApprovalModal({ title, description, onApprove, onCancel,
           </p>
         </div>
         <div className="modal-actions">
-          <button className="btn btn-ghost" onClick={onCancel}>Cancel</button>
-          <button className="btn btn-primary" onClick={onApprove}>{confirmLabel || 'Approve'}</button>
+          <button className="btn btn-ghost" onClick={onCancel}>
+            Cancel
+          </button>
+          <button className="btn btn-primary" disabled={busy} onClick={onApprove}>
+            {confirmLabel || 'Approve'}
+          </button>
         </div>
       </div>
     </div>
