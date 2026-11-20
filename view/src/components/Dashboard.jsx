@@ -23,13 +23,13 @@ export default function Dashboard() {
       'First deficit',
       fc.first_deficit_on || 'None in horizon',
       'First forecast day that closes below zero.',
-      !!fc.first_deficit_on,
+      false,
     ],
     [
       'Funding needed',
       eur(fc.funding_needed),
       'Cash needed to keep the balance at or above the reserve.',
-      Number(fc.funding_needed) > 0,
+      false,
     ],
   ];
   return (
@@ -50,6 +50,7 @@ export default function Dashboard() {
           payments. The dashed line marks your safety reserve.
         </p>
         <BalanceChart
+          neutral
           points={[{ day: fc.as_of, balance: fc.opening_balance }, ...fc.daily_balances]}
           reserve={fc.reserve}
         />

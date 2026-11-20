@@ -168,7 +168,13 @@ def snapshot(conn, dsn, row):
         "SELECT id,kind,basis,created_at FROM web_simulations WHERE revision=%s ORDER BY id DESC",
         (row["revision"],),
     ).fetchall()
+    statement_info = conn.execute(
+        "SELECT count(*) AS total, max(greatest(booked_on,value_on)) AS last_date "
+        "FROM transactions WHERE import_id=%s",
+        (row["import_id"],),
+    ).fetchone()
     return dict(
+        statement_info=statement_info,
         revision=row["revision"],
         settings=row["settings"],
         analysis=analysis.model_dump(mode="json"),

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { eur } from '../lib/api';
+import DateField from './DateField';
 import BalanceChart from './BalanceChart';
 import RecommendationCard from './RecommendationCard';
 
@@ -37,20 +38,30 @@ function Inputs() {
         keep.
       </div>
       <div className="controls">
-        {fields.map(([label, key, type]) => (
-          <label key={key}>
-            {label}
-            <input
-              type={type}
-              required
-              step={key === 'horizon_days' ? 1 : type === 'number' ? '.01' : undefined}
-              min={key === 'reserve' ? 0 : key === 'horizon_days' ? 1 : undefined}
-              max={key === 'horizon_days' ? 366 : undefined}
+        {fields.map(([label, key, type]) =>
+          type === 'date' ? (
+            <DateField
+              key={key}
+              label={label}
               value={settings[key]}
-              onChange={(e) => setSettings({ ...settings, [key]: e.target.value })}
+              onChange={(day) => setSettings({ ...settings, as_of: day })}
+              shortcuts={[['Last statement date', state.statement_info.last_date]]}
             />
-          </label>
-        ))}
+          ) : (
+            <label key={key}>
+              {label}
+              <input
+                type={type}
+                required
+                step={key === 'horizon_days' ? 1 : type === 'number' ? '.01' : undefined}
+                min={key === 'reserve' ? 0 : key === 'horizon_days' ? 1 : undefined}
+                max={key === 'horizon_days' ? 366 : undefined}
+                value={settings[key]}
+                onChange={(e) => setSettings({ ...settings, [key]: e.target.value })}
+              />
+            </label>
+          ),
+        )}
       </div>
       <details className="section">
         <summary>Import CSV files</summary>

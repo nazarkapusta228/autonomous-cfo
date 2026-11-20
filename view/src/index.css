@@ -354,3 +354,19 @@ summary { cursor: pointer; color: var(--accent); }
   .kpi-grid { grid-template-columns: repeat(2,minmax(0,1fr)); }
   .chart-wrap { height: 240px; }
 }
+
+.neutral-alert { color: inherit; background: transparent; }
+.hover-negative:hover { color: var(--danger); }
+.date-shortcuts { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
+.date-shortcuts .btn { font-size: 11px; padding: 3px 6px; }
+.allocation { display: flex; height: 9px; border-radius: 4px; overflow: hidden; margin: 0 0 12px; }
+.allocation span:nth-child(1) { background: var(--accent); }
+.allocation span:nth-child(2) { background: var(--primary); }
+.allocation span:nth-child(3) { background: var(--success); }
+.scenario-preview { padding: 12px 16px; border-left: 3px solid var(--accent); background: var(--bg-elev); margin: 12px 0; }
+.scenario-preview strong { display: block; font-size: 1.4rem; }
+.scenario-preview p { margin: 5px 0; }
+.chf-bar { display: block; height: 4px; margin-top: 5px; background: var(--border); }
+.chf-bar i { display: block; height: 100%; background: var(--accent); }
+.decision-lock { display: inline-block; cursor: help; }
+.decision-lock button:disabled { pointer-events: none; }

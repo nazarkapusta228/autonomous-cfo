@@ -14,18 +14,7 @@ export default function Sidebar({ active, onNavigate }) {
   return (
     <aside className="sidebar">
       <div className="sidebar-brand">
-        <h1>
-          <span
-            style={{
-              width: 10,
-              height: 10,
-              borderRadius: 3,
-              background: 'var(--primary)',
-              display: 'inline-block',
-            }}
-          />
-          Autonomous CFO
-        </h1>
+        <h1>Autonomous CFO</h1>
         <p>Commerzbank · RedHat Collabothon 2026</p>
       </div>
       <nav className="sidebar-nav">

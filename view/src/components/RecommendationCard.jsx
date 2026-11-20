@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { eur, nextDay } from '../lib/api';
+import DateField from './DateField';
 import BalanceChart from './BalanceChart';
 
 const labels = {
@@ -29,17 +30,20 @@ function Comparison({ role, proposal, fc }) {
     <details className="section">
       <summary>Compare cash balances</summary>
       <form className="controls" onSubmit={compare} onChange={() => setComparison(null)}>
-        <label>
-          Simulated settlement
-          <input
-            required
-            type="date"
-            min={nextDay(proposal.execute_on)}
-            max={proposal.available_until || undefined}
-            value={date}
-            onChange={(e) => setDate(e.target.value)}
-          />
-        </label>
+        <DateField
+          label="Simulated settlement"
+          value={date}
+          min={nextDay(proposal.execute_on)}
+          max={proposal.available_until || undefined}
+          onChange={(day) => {
+            setDate(day);
+            setComparison(null);
+          }}
+          shortcuts={[
+            ['Next day', nextDay(proposal.execute_on)],
+            ['Forecast end', fc.daily_balances.at(-1).day],
+          ]}
+        />
         <label>
           Assumed interest (€)
           <input
@@ -57,7 +61,11 @@ function Comparison({ role, proposal, fc }) {
       </form>
       {comparison && (
         <>
-          <p>Principal outstanding at horizon end: {eur(comparison.outstanding_principal)}.</p>
+          <p>
+            Compare the baseline with the balance after funding or investing, including settlement
+            and assumed interest. Principal outstanding at horizon end:{' '}
+            {eur(comparison.outstanding_principal)}.
+          </p>
           <BalanceChart
             points={comparison.baseline}
             action={comparison.with_action}
@@ -118,6 +126,38 @@ export default function RecommendationCard({ role }) {
           </div>
         </dl>
       )}
+      {role === 'liquidity' && (
+        <dl className="data-strip">
+          <div>
+            <dt>Lowest projected cash</dt>
+            <dd>{eur(state.analysis.forecast.minimum_balance)}</dd>
+          </div>
+          <div>
+            <dt>Target reserve</dt>
+            <dd>{eur(state.analysis.forecast.reserve)}</dd>
+          </div>
+          <div>
+            <dt>Funding gap</dt>
+            <dd>{eur(state.analysis.forecast.funding_needed)}</dd>
+          </div>
+        </dl>
+      )}
+      {role === 'investment' &&
+        Number(p.operating_cash) + Number(p.reserve_cash) + Number(p.free_cash) > 0 && (
+          <div
+            className="allocation"
+            role="img"
+            aria-label="Share of cash for operations, reserve and investment"
+          >
+            {[p.operating_cash, p.reserve_cash, p.free_cash].map((v, i) => (
+              <span
+                key={i}
+                title={['Operations', 'Safety reserve', 'Free to invest'][i] + ' · ' + eur(v)}
+                style={{ flex: Number(v) }}
+              />
+            ))}
+          </div>
+        )}
       <p>{p.explanation}</p>
       <ul>
         {p.risks.map((r) => (
@@ -142,6 +182,21 @@ export default function RecommendationCard({ role }) {
           ))}
         </div>
       )}
+      <div className="section">
+        <span
+          className="decision-lock"
+          tabIndex={0}
+          title="Already assessed for this forecast. Change forecast inputs and run the forecast to generate another decision."
+        >
+          <button disabled className="btn btn-ghost">
+            Regenerate decision
+          </button>
+        </span>
+        <p className="card-sub">
+          Already assessed. Change inputs in Liquidity Agent and run the forecast to enable a new
+          decision.
+        </p>
+      </div>
       {p.product && (
         <Comparison key={saved.id} role={role} proposal={p} fc={state.analysis.forecast} />
       )}

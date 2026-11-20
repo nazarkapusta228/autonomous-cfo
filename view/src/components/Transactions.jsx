@@ -92,7 +92,7 @@ function InvoiceReview() {
   );
 }
 
-function EditCategory({ transaction, close }) {
+function EditCategory({ transaction, close, onSaved }) {
   const { submit, busy } = useApp();
   const [value, setValue] = useState(transaction.category);
   const [future, setFuture] = useState(false);
@@ -104,11 +104,11 @@ function EditCategory({ transaction, close }) {
         if (
           await submit('categories', {
             source_row: transaction.source_row,
-            category: value,
+            category: value.trim(),
             future,
           })
         )
-          close();
+          onSaved(value.trim());
       }}
     >
       <label>
@@ -119,7 +119,10 @@ function EditCategory({ transaction, close }) {
         <input type="checkbox" checked={future} onChange={(e) => setFuture(e.target.checked)} />{' '}
         Apply to this payment type after the cutoff
       </label>
-      <button className="btn btn-primary" disabled={busy}>
+      <button
+        className="btn btn-primary"
+        disabled={busy || !value.trim() || (value.trim() === transaction.category && !future)}
+      >
         Save category
       </button>
       <button type="button" className="btn btn-ghost" onClick={close}>
@@ -134,6 +137,7 @@ export default function Transactions() {
   const [type, setType] = useState('');
   const [category, setCategory] = useState('');
   const [search, setSearch] = useState('');
+  const [notice, setNotice] = useState('');
   const [editing, setEditing] = useState(null);
   const [limit, setLimit] = useState(50);
   const rows = state.transactions.filter(
@@ -152,7 +156,7 @@ export default function Transactions() {
           through the cut-off date.
         </p>
         {state.history.length ? (
-          <BalanceChart points={state.history} />
+          <BalanceChart neutral points={state.history} />
         ) : (
           <p>No booked entries at this cutoff.</p>
         )}
@@ -196,15 +200,12 @@ export default function Transactions() {
       <section className="card">
         <div className="card-title">Account activity · {rows.length} payments</div>
         <p className="card-sub">
-          Filtered bank statement entries. Amounts are shown in the original currency.
+          {state.transactions.length} of {state.statement_info.total} imported payments were booked
+          and valued by {state.settings.as_of}. Showing {Math.min(limit, rows.length)} matching rows
+          in their original currencies. To include the entire file, select “Last statement date” in
+          Liquidity Agent and run the forecast.
         </p>
-        {editing && (
-          <EditCategory
-            key={editing.source_row}
-            transaction={editing}
-            close={() => setEditing(null)}
-          />
-        )}
+        <p role="status">{notice}</p>
         <table className="table">
           <thead>
             <tr>
@@ -217,19 +218,42 @@ export default function Transactions() {
           </thead>
           <tbody>
             {rows.slice(0, limit).map((t) => (
-              <tr key={t.source_row}>
-                <td>{t.value_on}</td>
-                <td>
-                  <button className="btn btn-ghost" onClick={() => setEditing(t)}>
-                    {t.category}
-                  </button>
-                </td>
-                <td>{t.reference}</td>
-                <td>{t.counterparty}</td>
-                <td className={Number(t.amount) < 0 ? 'amount-neg' : 'amount-pos'}>
-                  {t.amount} {t.currency}
-                </td>
-              </tr>
+              <React.Fragment key={t.source_row}>
+                <tr>
+                  <td>{t.value_on}</td>
+                  <td>
+                    <button
+                      className="btn btn-ghost"
+                      onClick={() => {
+                        setNotice('');
+                        setEditing(t);
+                      }}
+                    >
+                      {t.category}
+                    </button>
+                  </td>
+                  <td>{t.reference}</td>
+                  <td>{t.counterparty}</td>
+                  <td className={Number(t.amount) < 0 ? 'hover-negative' : 'amount-pos'}>
+                    {t.amount} {t.currency}
+                  </td>
+                </tr>
+                {editing?.source_row === t.source_row && (
+                  <tr>
+                    <td colSpan={5}>
+                      <EditCategory
+                        transaction={t}
+                        close={() => setEditing(null)}
+                        onSaved={(name) => {
+                          setEditing(null);
+                          setNotice('Row ' + t.source_row + ' saved as ' + name + '.');
+                          if (category) setCategory(name);
+                        }}
+                      />
+                    </td>
+                  </tr>
+                )}
+              </React.Fragment>
             ))}
           </tbody>
         </table>

@@ -20,7 +20,7 @@ const axisMoney = new Intl.NumberFormat('en-IE', {
   maximumFractionDigits: 2,
 });
 
-export default function BalanceChart({ points, action, reserve }) {
+export default function BalanceChart({ points, action, reserve, neutral = false }) {
   const gradient = useId().replace(/:/g, '');
   const data = points.map((p, i) => ({
     day: p.day,
@@ -35,8 +35,8 @@ export default function BalanceChart({ points, action, reserve }) {
   const all = action ? balances.concat(data.map((p) => p['With action'])) : balances;
   const floor = Math.min(0, ...all);
   const ceiling = Math.max(0, Number(reserve ?? 0), ...all);
-  const split = high > 0 && low < 0;
-  const stroke = split ? `url(#${gradient})` : low < 0 ? '#ff8797' : '#ffdb66';
+  const split = !neutral && high > 0 && low < 0;
+  const stroke = split ? `url(#${gradient})` : !neutral && low < 0 ? '#ff8797' : '#ffdb66';
   return (
     <figure className="balance-figure">
       <figcaption className="chart-key">
@@ -57,7 +57,7 @@ export default function BalanceChart({ points, action, reserve }) {
           </span>
         )}
         {firstNegative && (
-          <strong className="chart-alert">
+          <strong className={neutral ? 'chart-alert neutral-alert' : 'chart-alert'}>
             First below zero: {firstNegative.day} ({eur(firstNegative.Balance)})
           </strong>
         )}
@@ -87,11 +87,17 @@ export default function BalanceChart({ points, action, reserve }) {
               stroke="#ccd7ef"
             />
             <Tooltip
-              formatter={(v) => eur(v)}
+              formatter={(v) => (
+                <span className={neutral && Number(v) < 0 ? 'amount-neg' : undefined}>
+                  {eur(v)}
+                </span>
+              )}
               contentStyle={{ background: '#111b32', borderColor: '#7484a6' }}
               itemStyle={{ color: '#fff' }}
             />
-            {floor < 0 && <ReferenceArea y1={floor} y2={0} fill="#ff617d" fillOpacity={0.16} />}
+            {!neutral && floor < 0 && (
+              <ReferenceArea y1={floor} y2={0} fill="#ff617d" fillOpacity={0.16} />
+            )}
             <ReferenceLine
               y={0}
               stroke="#edf2ff"
@@ -129,7 +135,7 @@ export default function BalanceChart({ points, action, reserve }) {
                 x={firstNegative.day}
                 y={firstNegative.Balance}
                 r={5}
-                fill="#ff7188"
+                fill={neutral ? '#ffdb66' : '#ff7188'}
                 stroke="white"
                 strokeWidth={2}
               />

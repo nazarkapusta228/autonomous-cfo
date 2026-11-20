@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { eur, nextDay } from '../lib/api';
+import { BriefcaseBusiness, Coins } from 'lucide-react';
+import DateField from './DateField';
 import ApprovalModal from './ApprovalModal';
 
 export default function SimulationForm({
@@ -9,13 +11,21 @@ export default function SimulationForm({
   description,
   suggested = '',
   disabled = false,
+  suggestedDate,
 }) {
   const { state, busy, submit } = useApp();
   const [amount, setAmount] = useState(suggested);
-  const [date, setDate] = useState(nextDay(state.settings.as_of));
+  const [date, setDate] = useState(suggestedDate || nextDay(state.settings.as_of));
   const [rate, setRate] = useState('');
   const [confirm, setConfirm] = useState(false);
   const fx = kind === 'fx_forward';
+  const labels = {
+    fx_forward: 'Review CHF forward',
+    money_market: 'Review fund enquiry',
+    capex: 'Review equipment financing',
+    tax_prepayment: 'Review tax prepayment',
+  };
+  const lastRate = state.fx.rates.at(-1);
   const unit = fx ? 'CHF' : 'EUR';
   const records = state.simulations.filter((s) => s.kind === kind);
   async function approve() {
@@ -29,6 +39,7 @@ export default function SimulationForm({
       <div className="card-title">{title}</div>
       <p className="card-sub">{description}</p>
       <form
+        className="scenario-form"
         onSubmit={(e) => {
           e.preventDefault();
           setConfirm(true);
@@ -46,16 +57,16 @@ export default function SimulationForm({
               onChange={(e) => setAmount(e.target.value)}
             />
           </label>
-          <label>
-            Effective date
-            <input
-              type="date"
-              required
-              min={nextDay(state.settings.as_of)}
-              value={date}
-              onChange={(e) => setDate(e.target.value)}
-            />
-          </label>
+          <DateField
+            label="Effective date"
+            value={date}
+            onChange={setDate}
+            min={nextDay(state.settings.as_of)}
+            shortcuts={[
+              ['Next day', nextDay(state.settings.as_of)],
+              ['Forecast end', state.analysis.forecast.daily_balances.at(-1).day],
+            ]}
+          />
           {fx && (
             <label>
               Assumed EUR per CHF
@@ -70,8 +81,44 @@ export default function SimulationForm({
             </label>
           )}
         </div>
+        {fx && (
+          <div className="scenario-preview" aria-live="polite">
+            <small>Future payment in EUR</small>
+            <strong>
+              {Number(amount) > 0 && Number(rate) > 0 ? eur(Number(amount) * Number(rate)) : '—'}
+            </strong>
+            <p>
+              CHF payable × assumed EUR per CHF. A higher rate makes the same CHF bill more
+              expensive.
+            </p>
+            {lastRate && (
+              <button
+                type="button"
+                className="btn btn-ghost"
+                onClick={() => setRate(lastRate.rate)}
+              >
+                Use last booked rate · {lastRate.rate} ({lastRate.day})
+              </button>
+            )}
+          </div>
+        )}
+        {(kind === 'capex' || kind === 'money_market') && (
+          <div className="scenario-preview">
+            <small>{kind === 'capex' ? 'Financing requested' : 'Proposed placement'}</small>
+            <strong>{Number(amount) > 0 ? eur(amount) : '—'}</strong>
+            <p>
+              {kind === 'capex'
+                ? 'Prepare a simulated lender enquiry for equipment on the selected date.'
+                : 'Free cash limit for this forecast: ' +
+                  (suggested ? eur(suggested) : 'run the investment agent first') +
+                  '.'}
+            </p>
+          </div>
+        )}
         <button className="btn btn-primary" disabled={busy || disabled}>
-          Review simulation
+          {kind === 'capex' && <BriefcaseBusiness size={16} aria-hidden="true" />}
+          {kind === 'money_market' && <Coins size={16} aria-hidden="true" />}
+          {labels[kind]}
         </button>
       </form>
       {confirm && (

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { eur } from '../lib/api';
 import SimulationForm from './SimulationForm';
@@ -9,14 +9,36 @@ export default function TaxAgent() {
   const planned = state.analysis.plan.filter((p) =>
     /tax|steuer/i.test(p.category + ' ' + p.description),
   );
+  const [month, setMonth] = useState('');
+  const months = [...new Set(rows.map((t) => t.value_on.slice(0, 7)))].sort().reverse();
+  const filtered = rows.filter((t) => !month || t.value_on.startsWith(month));
+  const next = planned.find((p) => Number(p.amount_eur) < 0);
+  const paid =
+    filtered.reduce((sum, t) => sum + Math.max(0, -Math.round(Number(t.amount_eur) * 100)), 0) /
+    100;
   return (
     <>
-      <SimulationForm
-        key={state.revision}
-        kind="tax_prepayment"
-        title="Adjusted tax prepayment"
-        description="Use an amount from a tax notice or your accountant. Approving records a simulated filing in this workspace."
-      />
+      <section className="card mb-4">
+        <div className="card-title">Tax overview</div>
+        <p className="card-sub">
+          Compare tax payments already taken from the account with upcoming amounts in the cash flow
+          plan.
+        </p>
+        <dl className="data-strip">
+          <div>
+            <dt>Paid {month || 'through ' + state.settings.as_of}</dt>
+            <dd>{eur(paid)}</dd>
+          </div>
+          <div>
+            <dt>Next planned outflow</dt>
+            <dd>{next ? eur(-Number(next.amount_eur)) : 'None scheduled'}</dd>
+          </div>
+          <div>
+            <dt>Due date</dt>
+            <dd>{next?.date || '—'}</dd>
+          </div>
+        </dl>
+      </section>
       <section className="card mb-4">
         <div className="card-title">Tax payment calendar</div>
         <p className="card-sub">
@@ -52,7 +74,16 @@ export default function TaxAgent() {
         <p className="card-sub">
           Bank statement entries categorized as Taxes through the cut-off date.
         </p>
-        {rows.length ? (
+        <label className="controls">
+          Booking month{' '}
+          <select value={month} onChange={(e) => setMonth(e.target.value)}>
+            <option value="">All months</option>
+            {months.map((m) => (
+              <option key={m}>{m}</option>
+            ))}
+          </select>
+        </label>
+        {filtered.length ? (
           <table className="table">
             <thead>
               <tr>
@@ -62,7 +93,7 @@ export default function TaxAgent() {
               </tr>
             </thead>
             <tbody>
-              {rows.map((t) => (
+              {filtered.map((t) => (
                 <tr key={t.source_row}>
                   <td>{t.value_on}</td>
                   <td>{t.reference}</td>
@@ -77,6 +108,14 @@ export default function TaxAgent() {
           <p>No payments categorized as Taxes.</p>
         )}
       </section>
+      <SimulationForm
+        key={state.revision}
+        suggested={next ? String(-Number(next.amount_eur)) : ''}
+        suggestedDate={next?.date}
+        kind="tax_prepayment"
+        title="Adjusted tax prepayment"
+        description="Use an amount from a tax notice or your accountant. Approving records a simulated filing in this workspace."
+      />
     </>
   );
 }

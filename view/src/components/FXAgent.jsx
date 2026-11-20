@@ -16,6 +16,7 @@ export default function FXAgent() {
   const { state } = useApp();
   const rows = state.transactions.filter((t) => t.currency === 'CHF');
   const fx = state.fx;
+  const largest = Math.max(1, ...rows.map((t) => Math.abs(Number(t.amount_eur))));
   return (
     <>
       <section className="card mb-4">
@@ -36,7 +37,8 @@ export default function FXAgent() {
         {fx.rates.length > 0 && (
           <>
             <p className="card-sub">
-              Effective EUR per CHF on booked payments through {state.settings.as_of}
+              Each point is the EUR cost of one CHF on a booked payment through{' '}
+              {state.settings.as_of}. A rising line means each franc cost more euros.
             </p>
             <div className="chart-wrap">
               <ResponsiveContainer width="100%" height="100%">
@@ -80,7 +82,8 @@ export default function FXAgent() {
       <section className="card">
         <div className="card-title">Booked CHF payments</div>
         <p className="card-sub">
-          Through {state.settings.as_of}. EUR values use each payment’s booked rate.
+          These are payments already posted in CHF through {state.settings.as_of}. The bars compare
+          their absolute EUR values. A minus sign means money left the account.
         </p>
         {rows.length ? (
           <table className="table">
@@ -89,7 +92,7 @@ export default function FXAgent() {
                 <th>Date</th>
                 <th>Payment</th>
                 <th>CHF</th>
-                <th>EUR</th>
+                <th>EUR at booking</th>
               </tr>
             </thead>
             <tbody>
@@ -100,6 +103,11 @@ export default function FXAgent() {
                   <td className={Number(t.amount) < 0 ? 'amount-neg' : 'amount-pos'}>{t.amount}</td>
                   <td className={Number(t.amount_eur) < 0 ? 'amount-neg' : 'amount-pos'}>
                     {eur(t.amount_eur)}
+                    <span className="chf-bar" aria-hidden="true">
+                      <i
+                        style={{ width: (Math.abs(Number(t.amount_eur)) / largest) * 100 + '%' }}
+                      />
+                    </span>
                   </td>
                 </tr>
               ))}

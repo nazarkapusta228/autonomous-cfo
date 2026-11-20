@@ -169,7 +169,8 @@ def workspace(request: Request, response: Response):
 def forecast(request: Request, body: ForecastChange):
     with current(request, body.revision) as (conn, dsn, row):
         original = row.copy()
-        row["settings"] = body.settings.model_dump(mode="json")
+        if body.settings != ws.ForecastSettings.model_validate(row["settings"]):
+            row["settings"] = body.settings.model_dump(mode="json")
         for field in ("statement", "plan", "invoices"):
             value = getattr(body, field)
             if value is not None:
