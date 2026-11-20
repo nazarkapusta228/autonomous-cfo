@@ -1,51 +1,47 @@
+import { usePreferences } from '../context/Preferences';
+import { usePeriod } from '../context/StatementPeriod';
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
-import { eur } from '../lib/api';
-import StatementHistory from './StatementHistory';
+import BalanceChart from './BalanceChart';
 
 function InvoiceReview() {
+  const { t: tr, money: eur } = usePreferences();
   const { state, busy, submit } = useApp();
   const report = state.analysis.reconciliation;
   const [values, setValues] = useState({});
   if (!state.has_invoices) return null;
   return (
     <section className="card mb-4">
-      <div className="card-title">Invoice reconciliation</div>
-      <p className="card-sub">
-        Imported invoices matched against booked statement payments. Confirm uncertain matches
-        below.
-      </p>
+      <div className="card-title">{tr("Invoice reconciliation")}</div>
+      <p className="card-sub"> {tr("Imported invoices matched against booked statement payments. Confirm uncertain matches below.")} </p>
       <p>
-        {Object.keys(report.settled).length} settled · {report.outstanding.length} outstanding
-      </p>
+        {Object.keys(report.settled).length} {tr("settled ·")} {report.outstanding.length} {tr("outstanding")} </p>
       {Object.entries(report.settled).map(([invoice, row]) => (
         <p key={invoice}>
-          {invoice} · Settled by statement row {row}
+          {invoice} {tr("· Settled by statement row")} {row}
         </p>
       ))}
       {report.outstanding.map((i) => (
         <p key={i.invoice_id}>
-          {i.invoice_id} · {i.counterparty} · Due {i.due_on} · {eur(i.amount_eur)}
+          {i.invoice_id} · {i.counterparty} {tr("· Due")} {i.due_on} · {eur(i.amount_eur)}
           {report.unprojected_receivables.includes(i.invoice_id) &&
-            ' · Excluded from projected receipts'}
+            ' ' + tr("· Excluded from projected receipts")}
         </p>
       ))}
       {Object.entries(report.ambiguous).map(([id, rows]) => (
         <div className="controls" key={id}>
-          <label>
-            Match invoice {id}
+          <label> {tr("Match invoice")} {id}
             <select
-              aria-label={'Match invoice ' + id}
+              aria-label={tr("Match invoice") + ' ' + id}
               value={values[id] ?? ''}
               onChange={(e) => setValues({ ...values, [id]: e.target.value })}
             >
-              <option value="">Choose a match</option>
-              <option value="none">Keep outstanding</option>
+              <option value="">{tr("Choose a match")}</option>
+              <option value="none">{tr("Keep outstanding")}</option>
               {rows.map((r) => {
                 const t = state.transactions.find((t) => t.source_row === r);
                 return (
-                  <option key={r} value={r}>
-                    Row {r} · {t?.value_on} · {t?.reference}
+                  <option key={r} value={r}> {tr("Row")} {r} · {t?.value_on} · {t?.reference}
                   </option>
                 );
               })}
@@ -60,19 +56,17 @@ function InvoiceReview() {
                 source_row: values[id] === 'none' ? null : Number(values[id]),
               })
             }
-          >
-            Confirm match
-          </button>
+          > {tr("Confirm match")} </button>
         </div>
       ))}
       {Object.keys(report.payment_patterns).length > 0 && (
         <table className="table section">
-          <caption>Payment timing from matched invoices</caption>
+          <caption>{tr("Payment timing from matched invoices")}</caption>
           <thead>
             <tr>
-              <th>Counterparty</th>
-              <th>Late payments / matched</th>
-              <th>Median delay</th>
+              <th>{tr("Counterparty")}</th>
+              <th>{tr("Late payments / matched")}</th>
+              <th>{tr("Median delay")}</th>
             </tr>
           </thead>
           <tbody>
@@ -82,7 +76,7 @@ function InvoiceReview() {
                 <td>
                   {p.late_payments} / {p.payments}
                 </td>
-                <td>{p.median_delay_days} days</td>
+                <td>{p.median_delay_days} {tr("days")}</td>
               </tr>
             ))}
           </tbody>
@@ -93,6 +87,7 @@ function InvoiceReview() {
 }
 
 function EditCategory({ transaction, close, onSaved }) {
+  const { t: tr } = usePreferences();
   const { submit, busy } = useApp();
   const [value, setValue] = useState(transaction.category);
   const [future, setFuture] = useState(false);
@@ -111,28 +106,22 @@ function EditCategory({ transaction, close, onSaved }) {
           onSaved(value.trim());
       }}
     >
-      <label>
-        Category for row {transaction.source_row}
+      <label> {tr("Category for row")} {transaction.source_row}
         <input required maxLength={100} value={value} onChange={(e) => setValue(e.target.value)} />
       </label>
       <label>
-        <input type="checkbox" checked={future} onChange={(e) => setFuture(e.target.checked)} />{' '}
-        Apply to this payment type after the cutoff
-      </label>
+        <input type="checkbox" checked={future} onChange={(e) => setFuture(e.target.checked)} />{' '} {tr("Apply to this payment type after the cutoff")} </label>
       <button
         className="btn btn-primary"
         disabled={busy || !value.trim() || (value.trim() === transaction.category && !future)}
-      >
-        Save category
-      </button>
-      <button type="button" className="btn btn-ghost" onClick={close}>
-        Cancel
-      </button>
+      > {tr("Save category")} </button>
+      <button type="button" className="btn btn-ghost" onClick={close}> {tr("Cancel")} </button>
     </form>
   );
 }
 
 export default function Transactions() {
+  const { t: tr, money: eur } = usePreferences();
   const { state } = useApp();
   const [type, setType] = useState('');
   const [category, setCategory] = useState('');
@@ -140,7 +129,8 @@ export default function Transactions() {
   const [notice, setNotice] = useState('');
   const [editing, setEditing] = useState(null);
   const [page, setPage] = useState(0);
-  const rows = state.transactions.filter(
+  const period = usePeriod();
+  const rows = period.rows.filter(
     (t) =>
       (!type || type === t.kind) &&
       (!category || category === t.category) &&
@@ -153,13 +143,11 @@ export default function Transactions() {
     <>
       <InvoiceReview key={state.revision} />
       <section className="card mb-4">
-        <div className="card-title">Account history</div>
-        <StatementHistory points={state.history} key={state.revision} />
+        <div className="card-title">{tr("Account history")}</div>
+        <BalanceChart neutral points={period.points} />
         <div className="controls">
-          <label>
-            Payment type
-            <select
-              aria-label="Payment type"
+          <label> {tr("Payment type")} <select
+              aria-label={tr("Payment type")}
               value={type}
               onChange={(e) => {
                 setType(e.target.value);
@@ -167,16 +155,14 @@ export default function Transactions() {
                 setEditing(null);
               }}
             >
-              <option value="">All types</option>
-              {[...new Set(state.transactions.map((t) => t.kind))].sort().map((k) => (
-                <option key={k}>{k}</option>
+              <option value="">{tr("All types")}</option>
+              {[...new Set(period.rows.map((t) => t.kind))].sort().map((k) => (
+                <option key={k} value={k}>{tr(k)}</option>
               ))}
             </select>
           </label>
-          <label>
-            Category
-            <select
-              aria-label="Category"
+          <label> {tr("Category")} <select
+              aria-label={tr("Category")}
               value={category}
               onChange={(e) => {
                 setCategory(e.target.value);
@@ -184,19 +170,17 @@ export default function Transactions() {
                 setEditing(null);
               }}
             >
-              <option value="">All categories</option>
-              {Object.entries(state.categories)
+              <option value="">{tr("All categories")}</option>
+              {Object.entries(period.rows.reduce((totals, row) => { totals[row.category] = (totals[row.category] || 0) + Number(row.amount_eur); return totals; }, {}))
                 .sort()
                 .map(([k, sum]) => (
                   <option key={k} value={k}>
-                    {k} · {eur(sum)}
+                    {tr(k)} · {eur(sum)}
                   </option>
                 ))}
             </select>
           </label>
-          <label>
-            Search reference or counterparty
-            <input
+          <label> {tr("Search reference or counterparty")} <input
               type="search"
               value={search}
               onChange={(e) => {
@@ -209,23 +193,18 @@ export default function Transactions() {
         </div>
       </section>
       <section className="card">
-        <div className="card-title">Account activity · {rows.length} payments</div>
+        <div className="card-title">{tr("Account activity ·")} {rows.length} {tr("payments")}</div>
         <p className="card-sub">
-          {state.transactions.length} of {state.statement_info.total} imported payments were booked
-          and valued by {state.settings.as_of}. Showing {rows.length ? offset + 1 : 0}–
-          {Math.min(offset + 50, rows.length)} of {rows.length} matching rows in their original
-          currencies. To include the entire file, select “Last statement date” in Liquidity Agent
-          and run the forecast.
-        </p>
+          {rows.length} {tr("matching payments in the selected statement period.")} </p>
         <p role="status">{notice}</p>
         <table className="table">
           <thead>
             <tr>
-              <th className="date-cell">Value date</th>
-              <th>Category</th>
-              <th>Reference</th>
-              <th>Counterparty</th>
-              <th>Amount</th>
+              <th className="date-cell">{tr("Value date")}</th>
+              <th>{tr("Category")}</th>
+              <th>{tr("Reference")}</th>
+              <th>{tr("Counterparty")}</th>
+              <th>{tr("Amount")}</th>
             </tr>
           </thead>
           <tbody>
@@ -235,13 +214,14 @@ export default function Transactions() {
                   <td className="date-cell">{t.value_on}</td>
                   <td>
                     <button
+                      disabled={t.booked_on > state.settings.as_of || t.value_on > state.settings.as_of}
                       className="btn btn-ghost"
                       onClick={() => {
                         setNotice('');
                         setEditing(t);
                       }}
                     >
-                      {t.category}
+                      {tr(t.category)}
                     </button>
                   </td>
                   <td>{t.reference}</td>
@@ -258,7 +238,7 @@ export default function Transactions() {
                         close={() => setEditing(null)}
                         onSaved={(name) => {
                           setEditing(null);
-                          setNotice('Row ' + t.source_row + ' saved as ' + name + '.');
+                          setNotice(tr("Row") + ' ' + t.source_row + ' ' + tr("saved as") + ' ' + name + '.');
                           if (category) setCategory(name);
                         }}
                       />
@@ -270,7 +250,7 @@ export default function Transactions() {
           </tbody>
         </table>
         {pages > 1 && (
-          <nav aria-label="Payment pages" className="controls">
+          <nav aria-label={tr("Payment pages")} className="controls">
             <button
               className="btn btn-ghost"
               disabled={!current}
@@ -278,11 +258,8 @@ export default function Transactions() {
                 setPage(current - 1);
                 setEditing(null);
               }}
-            >
-              Previous 50
-            </button>
-            <span>
-              Page {current + 1} of {pages}
+            > {tr("Previous 50")} </button>
+            <span> {tr("Page")} {current + 1} {tr("of")} {pages}
             </span>
             <button
               className="btn btn-ghost"
@@ -291,9 +268,7 @@ export default function Transactions() {
                 setPage(current + 1);
                 setEditing(null);
               }}
-            >
-              Next 50
-            </button>
+            > {tr("Next 50")} </button>
           </nav>
         )}
       </section>

@@ -1,3 +1,4 @@
+import { usePreferences } from '../context/Preferences';
 import React from 'react';
 
 export default function ApprovalModal({
@@ -10,6 +11,7 @@ export default function ApprovalModal({
   blockedMessage,
   onAssess,
 }) {
+  const { t: tr } = usePreferences();
   return (
     <div className="modal-backdrop" onClick={onCancel}>
       <div
@@ -23,25 +25,20 @@ export default function ApprovalModal({
         <p>{blockedMessage || description}</p>
         {!blockedMessage && (
           <div className="rec-block" style={{ marginBottom: 0 }}>
-            <h4 style={{ fontSize: 12 }}>⚠ Human-in-the-loop approval</h4>
-            <p style={{ fontSize: 12 }}>
-              This action will be logged to the audit trail. In this demo, no real financial
-              transaction will be executed — all executions are simulated.
-            </p>
+            <h4 style={{ fontSize: 12 }}>{tr("⚠ Human-in-the-loop approval")}</h4>
+            <p style={{ fontSize: 12 }}> {tr("Approval records this simulation in the workspace audit.")} </p>
           </div>
         )}
         <div className="modal-actions">
           <button className="btn btn-ghost" onClick={onCancel}>
-            {blockedMessage ? 'Close' : 'Cancel'}
+            {blockedMessage ? tr("Close") : tr("Cancel")}
           </button>
           {onAssess && (
-            <button className="btn btn-primary" disabled={busy} onClick={onAssess}>
-              Run assessment
-            </button>
+            <button className="btn btn-primary" disabled={busy} onClick={onAssess}> {tr("Run assessment")} </button>
           )}
           {!blockedMessage && (
             <button className="btn btn-primary" disabled={busy} onClick={onApprove}>
-              {confirmLabel || 'Approve'}
+              {confirmLabel || tr("Approve")}
             </button>
           )}
         </div>

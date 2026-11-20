@@ -1,9 +1,11 @@
+import { usePreferences } from '../context/Preferences';
 import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
 import { api } from '../lib/api';
 
 const AppContext = createContext();
 
 export function AppProvider({ children }) {
+  const { t: tr } = usePreferences();
   const [state, setState] = useState(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -47,15 +49,13 @@ export function AppProvider({ children }) {
         children
       ) : (
         <div className="card">
-          {error || 'Loading workspace…'} {error && <button onClick={refresh}>Retry</button>}
+          {error || tr("Loading workspace…")} {error && <button onClick={refresh}>{tr("Retry")}</button>}
         </div>
       )}
       {state && error && (
         <div role="alert" className="toast error">
           {error}{' '}
-          <button className="btn btn-ghost" onClick={() => setError('')}>
-            Dismiss
-          </button>
+          <button className="btn btn-ghost" onClick={() => setError('')}> {tr("Dismiss")} </button>
         </div>
       )}
     </AppContext.Provider>

@@ -1,20 +1,21 @@
+import { usePreferences } from '../context/Preferences';
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
-import { eur } from '../lib/api';
 import DateField from './DateField';
 import BalanceChart from './BalanceChart';
 import RecommendationCard from './RecommendationCard';
 
 function Inputs() {
+  const { t: tr } = usePreferences();
   const { state, busy, submit, setError } = useApp();
   const [settings, setSettings] = useState(state.settings);
   const [files, setFiles] = useState({});
   const [remove, setRemove] = useState(false);
   const fields = [
-    ['Cut-off date', 'as_of', 'date'],
-    ['Opening balance before first booking (€)', 'starting_balance', 'number'],
-    ['Safety reserve (€)', 'reserve', 'number'],
-    ['Forecast days', 'horizon_days', 'number'],
+    [tr("Cut-off date"), 'as_of', 'date'],
+    [tr("Opening balance before first booking (€)"), 'starting_balance', 'number'],
+    [tr("Safety reserve (€)"), 'reserve', 'number'],
+    [tr("Forecast days"), 'horizon_days', 'number'],
   ];
   async function run(e) {
     e.preventDefault();
@@ -31,12 +32,8 @@ function Inputs() {
   }
   return (
     <form className="card mb-4" onSubmit={run}>
-      <div className="card-title">Forecast settings</div>
-      <div className="card-sub">
-        The opening balance is cash before the first statement entry. Booked movements through the
-        cut-off set the forecast starting point. The reserve is the minimum cash cushion you want to
-        keep.
-      </div>
+      <div className="card-title">{tr("Forecast settings")}</div>
+      <div className="card-sub"> {tr("The opening balance is cash before the first statement entry. Booked movements through the cut-off set the forecast starting point. The reserve is the minimum cash cushion you want to keep.")} </div>
       <div className="controls">
         {fields.map(([label, key, type]) =>
           type === 'date' ? (
@@ -45,7 +42,7 @@ function Inputs() {
               label={label}
               value={settings[key]}
               onChange={(day) => setSettings({ ...settings, as_of: day })}
-              shortcuts={[['Last statement date', state.statement_info.last_date]]}
+              shortcuts={[[tr("Last statement date"), state.statement_info.last_date]]}
             />
           ) : (
             <label key={key}>
@@ -64,16 +61,13 @@ function Inputs() {
         )}
       </div>
       <details className="section">
-        <summary>Import CSV files</summary>
-        <p>
-          Keep a field empty to reuse its current file. The initial workspace uses the Pizzeria
-          Amalfi sample.
-        </p>
+        <summary>{tr("Import CSV files")}</summary>
+        <p> {tr("Leave a field empty to keep its current file.")} </p>
         <div className="controls">
           {[
-            ['statement', 'Bank statement'],
-            ['plan', 'Cash flow plan'],
-            ['invoices', 'Invoices'],
+            ['statement', tr("Bank statement")],
+            ['plan', tr("Cash flow plan")],
+            ['invoices', tr("Invoices")],
           ].map(([k, label]) => (
             <label key={k}>
               {label}
@@ -88,33 +82,29 @@ function Inputs() {
         </div>
         {state.has_invoices && (
           <label>
-            <input type="checkbox" checked={remove} onChange={(e) => setRemove(e.target.checked)} />{' '}
-            Remove imported invoices
-          </label>
+            <input type="checkbox" checked={remove} onChange={(e) => setRemove(e.target.checked)} />{' '} {tr("Remove imported invoices")} </label>
         )}
-        <p>
-          Plan: date,category,amount_eur,description (optional invoice_id). Invoices:
-          invoice_id;counterparty;issued_on;due_on;amount_eur. Use ISO dates and signed EUR amounts.
-        </p>
+        <p> {tr("Plan: date,category,amount_eur,description (optional invoice_id). Invoices: invoice_id;counterparty;issued_on;due_on;amount_eur. Use ISO dates and signed EUR amounts.")} </p>
       </details>
       <button className="btn btn-primary" disabled={busy}>
-        {busy ? 'Working…' : 'Run forecast'}
+        {busy ? tr("Working…") : tr("Run forecast")}
       </button>
     </form>
   );
 }
 
 function FlowTable({ flows, risk = false, showSource = false }) {
+  const { t: tr, money: eur } = usePreferences();
   const largest = flows.reduce((max, flow) => Math.max(max, Math.abs(Number(flow.amount_eur))), 0);
   return (
     <table className="table">
       <thead>
         <tr>
-          <th>Date</th>
-          <th>Payment</th>
-          <th>Category</th>
-          {showSource && <th>Source</th>}
-          <th className="numeric">Amount (EUR)</th>
+          <th>{tr("Date")}</th>
+          <th>{tr("Payment")}</th>
+          <th>{tr("Category")}</th>
+          {showSource && <th>{tr("Source")}</th>}
+          <th className="numeric">{tr("Amount")}</th>
         </tr>
       </thead>
       <tbody>
@@ -124,7 +114,7 @@ function FlowTable({ flows, risk = false, showSource = false }) {
             <td>{flow.description}</td>
             <td>{flow.category}</td>
             {showSource && (
-              <td>{flow.invoice_id ? 'Invoice ' + flow.invoice_id : 'Cash flow plan'}</td>
+              <td>{flow.invoice_id ? tr("Invoice") + ' ' + flow.invoice_id : tr("Cash flow plan")}</td>
             )}
             <td
               className={'numeric ' + (Number(flow.amount_eur) < 0 ? 'amount-neg' : 'amount-pos')}
@@ -144,6 +134,7 @@ function FlowTable({ flows, risk = false, showSource = false }) {
 }
 
 export default function LiquidityAgent() {
+  const { t: tr, money: eur } = usePreferences();
   const { state } = useApp();
   const a = state.analysis,
     f = a.forecast;
@@ -153,14 +144,12 @@ export default function LiquidityAgent() {
       <Inputs key={state.revision} />
       <div className="liquidity-results">
         <section className="card">
-          <div className="card-title">Liquidity decision</div>
+          <div className="card-title">{tr("Liquidity decision")}</div>
           <RecommendationCard role="liquidity" />
         </section>
         <section className="card">
-          <div className="card-title">Forecast · {state.settings.horizon_days} days</div>
-          <p className="card-sub">
-            Daily closing balance in EUR. Reserve {eur(f.reserve)}. Minimum {eur(f.minimum_balance)}{' '}
-            on {f.minimum_on}.
+          <div className="card-title">{tr("Forecast ·")} {state.settings.horizon_days} {tr("days")}</div>
+          <p className="card-sub"> {tr("Daily closing balance. Reserve")} {eur(f.reserve)}{tr(". Minimum")} {eur(f.minimum_balance)}{' '} {tr("on")} {f.minimum_on}.
           </p>
           <BalanceChart
             neutral
@@ -170,25 +159,23 @@ export default function LiquidityAgent() {
         </section>
       </div>
       <section className="card mb-4">
-        <div className="card-title">Payments at risk</div>
-        <p className="card-sub">
-          Outgoing payments on the first payment date that closes below your safety reserve of{' '}
-          {eur(f.reserve)}. The bars compare payment sizes.
-        </p>
+        <div className="card-title">{tr("Payments at risk")}</div>
+        <p className="card-sub"> {tr("Outgoing payments on the first payment date that closes below your safety reserve of")}{' '}
+          {eur(f.reserve)}{tr(". The bars compare payment sizes.")} </p>
         {a.payments_at_risk.length ? (
           <>
             {riskDay && (
               <dl className="data-strip">
                 <div>
-                  <dt>First payment date at risk</dt>
+                  <dt>{tr("First payment date at risk")}</dt>
                   <dd>{riskDay.day}</dd>
                 </div>
                 <div>
-                  <dt>Forecast closing balance</dt>
+                  <dt>{tr("Forecast closing balance")}</dt>
                   <dd>{eur(riskDay.balance)}</dd>
                 </div>
                 <div>
-                  <dt>Gap to reserve that day</dt>
+                  <dt>{tr("Gap to reserve that day")}</dt>
                   <dd className="amount-neg">{eur(Number(f.reserve) - Number(riskDay.balance))}</dd>
                 </div>
               </dl>
@@ -196,30 +183,26 @@ export default function LiquidityAgent() {
             <FlowTable flows={a.payments_at_risk} risk />
           </>
         ) : (
-          <p>No planned outgoing payments fall on a below-reserve day.</p>
+          <p>{tr("No planned outgoing payments fall on a below-reserve day.")}</p>
         )}
         {f.drivers.length > 0 && (
           <details className="section">
-            <summary>Payments driving the shortfall</summary>
-            <p className="card-sub">
-              Outflows on net spending days up to the lowest forecast balance.
-            </p>
+            <summary>{tr("Payments driving the shortfall")}</summary>
+            <p className="card-sub"> {tr("Outflows on net spending days up to the lowest forecast balance.")} </p>
             <FlowTable flows={f.drivers} />
           </details>
         )}
         {a.receipt_delays.length > 0 && (
           <>
-            <h4 className="section">Delayed receipts</h4>
-            <p className="card-sub">
-              Expected dates reflect the customer’s observed payment delays.
-            </p>
+            <h4 className="section">{tr("Delayed receipts")}</h4>
+            <p className="card-sub"> {tr("Expected dates reflect the customer’s observed payment delays.")} </p>
             <table className="table">
               <thead>
                 <tr>
-                  <th>Invoice</th>
-                  <th>Due</th>
-                  <th>Expected</th>
-                  <th className="numeric">Income</th>
+                  <th>{tr("Invoice")}</th>
+                  <th>{tr("Due")}</th>
+                  <th>{tr("Expected")}</th>
+                  <th className="numeric">{tr("Income")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -237,16 +220,12 @@ export default function LiquidityAgent() {
         )}
       </section>
       <section className="card">
-        <div className="card-title">Planned payments and income</div>
-        <p className="card-sub">
-          Expected movements in this forecast come from the cash flow plan CSV and eligible
-          outstanding invoices. The workspace starts with the Pizzeria Amalfi sample. Import your
-          files under Forecast settings to use your own figures.
-        </p>
+        <div className="card-title">{tr("Planned payments and income")}</div>
+        <p className="card-sub"> {tr("Expected movements in this forecast come from the cash flow plan CSV and eligible outstanding invoices.")} </p>
         {a.plan.length ? (
           <FlowTable flows={a.plan} showSource />
         ) : (
-          <p>No planned entries within this forecast period.</p>
+          <p>{tr("No planned entries within this forecast period.")}</p>
         )}
       </section>
     </>

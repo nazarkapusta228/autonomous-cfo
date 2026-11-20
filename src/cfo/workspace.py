@@ -115,20 +115,21 @@ def analyse(dsn, row):
     )
 
 
-def ledger(dsn, row, transactions=None):
+def ledger(dsn, row, transactions=None, *, full_statement=False):
     overrides, rules = load_categories(dsn, row["import_id"])
     return categorize(
         parse_statement(row["statement"]) if transactions is None else transactions,
         overrides=overrides,
         rules=rules,
-        as_of=ForecastSettings.model_validate(row["settings"]).as_of,
+        as_of=None if full_statement else ForecastSettings.model_validate(row["settings"]).as_of,
     )
 
 
 def snapshot(conn, dsn, row):
     analysis = analyse(dsn, row)
     transactions = parse_statement(row["statement"])
-    groups = ledger(dsn, row, transactions)
+    groups = ledger(dsn, row, transactions, full_statement=True)
+    cutoff = analysis.forecast.as_of
     records = sorted(
         (
             dict(t.model_dump(mode="json"), category=name)
@@ -138,7 +139,15 @@ def snapshot(conn, dsn, row):
         key=lambda t: (t["value_on"], t["source_row"]),
         reverse=True,
     )
-    visible = [t for group in groups.values() for t in group.transactions]
+    visible = [t for t in transactions if max(t.booked_on, t.value_on) <= cutoff]
+    visible_rows = {t.source_row for t in visible}
+    category_totals = {}
+    for record in records:
+        if record["source_row"] in visible_rows:
+            name = record["category"]
+            category_totals[name] = category_totals.get(name, Decimal(0)) + Decimal(
+                record["amount_eur"]
+            )
     history = daily_balances(transactions, analysis.starting_balance)
     foreign = sorted((t for t in visible if t.currency == "CHF"), key=lambda t: t.value_on)
     fx = {
@@ -179,9 +188,10 @@ def snapshot(conn, dsn, row):
         revision=row["revision"],
         settings=row["settings"],
         analysis=analysis.model_dump(mode="json"),
-        transactions=records,
+        statement_rows=records,
+        transactions=[r for r in records if r["source_row"] in visible_rows],
         fx=fx,
-        categories={k: str(v.amount_eur) for k, v in groups.items()},
+        categories={k: str(v) for k, v in category_totals.items()},
         assessments=assessments,
         audit=audit,
         simulations=simulations,

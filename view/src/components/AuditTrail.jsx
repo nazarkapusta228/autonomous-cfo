@@ -1,3 +1,4 @@
+import { usePreferences } from '../context/Preferences';
 import React from 'react';
 
 const workflows = {
@@ -17,6 +18,7 @@ const stages = {
 const order = ['assessed', 'approved', 'rejected', 'simulated'];
 
 export default function AuditTrail({ events }) {
+  const { t: tr, locale } = usePreferences();
   const records = new Map();
   for (const event of events) {
     const key = event.kind + '-' + event.number;
@@ -35,17 +37,16 @@ export default function AuditTrail({ events }) {
         return (
           <article key={key}>
             <header>
-              <strong>{workflows[latest.kind] || latest.kind}</strong>
-              <small>
-                Record #{latest.number} · {new Date(latest.occurred_at).toLocaleDateString()}
+              <strong>{tr(workflows[latest.kind] || latest.kind)}</strong>
+              <small> {tr("Record #")}{latest.number} · {new Date(latest.occurred_at).toLocaleDateString(locale)}
               </small>
             </header>
             <ol>
               {steps.map((s, i) => (
                 <li key={i}>
-                  <span>{stages[s.event] || s.event}</span>
+                  <span>{tr(stages[s.event] || s.event)}</span>
                   <time dateTime={s.occurred_at}>
-                    {new Date(s.occurred_at).toLocaleTimeString()}
+                    {new Date(s.occurred_at).toLocaleTimeString(locale)}
                   </time>
                 </li>
               ))}

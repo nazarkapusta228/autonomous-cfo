@@ -1,11 +1,14 @@
+import { usePreferences } from '../context/Preferences';
+import { usePeriod } from '../context/StatementPeriod';
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
-import { eur } from '../lib/api';
 import SimulationForm from './SimulationForm';
 
 export default function TaxAgent() {
+  const { t: tr, money: eur } = usePreferences();
   const { state } = useApp();
-  const rows = state.transactions.filter((t) => t.category.toLowerCase() === 'taxes');
+  const period = usePeriod();
+  const rows = period.rows.filter((t) => t.category.toLowerCase() === 'taxes');
   const planned = state.analysis.plan.filter((p) =>
     /tax|steuer/i.test(p.category + ' ' + p.description),
   );
@@ -19,38 +22,33 @@ export default function TaxAgent() {
   return (
     <>
       <section className="card mb-4">
-        <div className="card-title">Tax overview</div>
-        <p className="card-sub">
-          Compare tax payments already taken from the account with upcoming amounts in the cash flow
-          plan.
-        </p>
+        <div className="card-title">{tr("Tax overview")}</div>
+        <p className="card-sub"> {tr("Compare tax payments already taken from the account with upcoming amounts in the cash flow plan.")} </p>
         <dl className="data-strip">
           <div>
-            <dt>Paid {month || 'through ' + state.settings.as_of}</dt>
+            <dt>{tr("Paid")} {month || period.start + ' – ' + period.end}</dt>
             <dd>{eur(paid)}</dd>
           </div>
           <div>
-            <dt>Next planned outflow</dt>
-            <dd>{next ? eur(-Number(next.amount_eur)) : 'None scheduled'}</dd>
+            <dt>{tr("Next planned outflow")}</dt>
+            <dd>{next ? eur(-Number(next.amount_eur)) : tr("None scheduled")}</dd>
           </div>
           <div>
-            <dt>Due date</dt>
+            <dt>{tr("Due date")}</dt>
             <dd>{next?.date || '—'}</dd>
           </div>
         </dl>
       </section>
       <section className="card mb-4">
-        <div className="card-title">Tax payment calendar</div>
-        <p className="card-sub">
-          Forecast entries whose category or description mentions tax or Steuer.
-        </p>
+        <div className="card-title">{tr("Tax payment calendar")}</div>
+        <p className="card-sub"> {tr("Forecast entries whose category or description mentions tax or Steuer.")} </p>
         {planned.length ? (
           <table className="table">
             <thead>
               <tr>
-                <th>Date</th>
-                <th>Planned payment</th>
-                <th>Amount (EUR)</th>
+                <th>{tr("Date")}</th>
+                <th>{tr("Planned payment")}</th>
+                <th>{tr("Amount")}</th>
               </tr>
             </thead>
             <tbody>
@@ -66,18 +64,15 @@ export default function TaxAgent() {
             </tbody>
           </table>
         ) : (
-          <p>No identified tax payments in the current plan.</p>
+          <p>{tr("No identified tax payments in the current plan.")}</p>
         )}
       </section>
       <section className="card">
-        <div className="card-title">Booked tax payments</div>
-        <p className="card-sub">
-          Bank statement entries categorized as Taxes through the cut-off date.
-        </p>
-        <label className="controls">
-          Booking month{' '}
+        <div className="card-title">{tr("Booked tax payments")}</div>
+        <p className="card-sub"> {tr("Bank statement entries categorized as Taxes in the selected period.")} </p>
+        <label className="controls"> {tr("Booking month")}{' '}
           <select value={month} onChange={(e) => setMonth(e.target.value)}>
-            <option value="">All months</option>
+            <option value="">{tr("All months")}</option>
             {months.map((m) => (
               <option key={m}>{m}</option>
             ))}
@@ -87,9 +82,9 @@ export default function TaxAgent() {
           <table className="table">
             <thead>
               <tr>
-                <th>Date</th>
-                <th>Reference</th>
-                <th>Amount</th>
+                <th>{tr("Date")}</th>
+                <th>{tr("Reference")}</th>
+                <th>{tr("Amount")}</th>
               </tr>
             </thead>
             <tbody>
@@ -105,7 +100,7 @@ export default function TaxAgent() {
             </tbody>
           </table>
         ) : (
-          <p>No payments categorized as Taxes.</p>
+          <p>{tr("No payments categorized as Taxes.")}</p>
         )}
       </section>
       <SimulationForm
@@ -113,8 +108,8 @@ export default function TaxAgent() {
         suggested={next ? String(-Number(next.amount_eur)) : ''}
         suggestedDate={next?.date}
         kind="tax_prepayment"
-        title="Adjusted tax prepayment"
-        description="Use an amount from a tax notice or your accountant. Approving records a simulated filing in this workspace."
+        title={tr("Adjusted tax prepayment")}
+        description={tr("Use an amount from a tax notice or your accountant. Approving records a simulated filing in this workspace.")}
       />
     </>
   );

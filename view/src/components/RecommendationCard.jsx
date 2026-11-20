@@ -1,6 +1,7 @@
+import { usePreferences } from '../context/Preferences';
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
-import { eur, nextDay } from '../lib/api';
+import { nextDay } from '../lib/api';
 import DateField from './DateField';
 import BalanceChart from './BalanceChart';
 
@@ -11,6 +12,7 @@ const labels = {
 };
 
 function Comparison({ role, proposal, fc }) {
+  const { t: tr, money: eur } = usePreferences();
   const { busy, submit } = useApp();
   const [date, setDate] = useState(
     proposal.available_until || nextDay(fc.daily_balances.at(-1).day),
@@ -28,10 +30,10 @@ function Comparison({ role, proposal, fc }) {
   }
   return (
     <details className="section">
-      <summary>Compare cash balances</summary>
+      <summary>{tr("Compare cash balances")}</summary>
       <form className="controls" onSubmit={compare} onChange={() => setComparison(null)}>
         <DateField
-          label="Simulated settlement"
+          label={tr("Simulated settlement")}
           value={date}
           min={nextDay(proposal.execute_on)}
           max={proposal.available_until || undefined}
@@ -40,13 +42,11 @@ function Comparison({ role, proposal, fc }) {
             setComparison(null);
           }}
           shortcuts={[
-            ['Next day', nextDay(proposal.execute_on)],
-            ['Forecast end', fc.daily_balances.at(-1).day],
+            [tr("Next day"), nextDay(proposal.execute_on)],
+            [tr("Forecast end"), fc.daily_balances.at(-1).day],
           ]}
         />
-        <label>
-          Assumed interest (€)
-          <input
+        <label> {tr("Assumed interest (€)")} <input
             type="number"
             step=".01"
             min="0"
@@ -55,15 +55,11 @@ function Comparison({ role, proposal, fc }) {
             onChange={(e) => setInterest(e.target.value)}
           />
         </label>
-        <button disabled={busy} className="btn btn-ghost">
-          Compare scenarios
-        </button>
+        <button disabled={busy} className="btn btn-ghost"> {tr("Compare scenarios")} </button>
       </form>
       {comparison && (
         <>
-          <p>
-            Compare the baseline with the balance after funding or investing, including settlement
-            and assumed interest. Principal outstanding at horizon end:{' '}
+          <p> {tr("Compare the baseline with the balance after funding or investing, including settlement and assumed interest. Principal outstanding at horizon end:")}{' '}
             {eur(comparison.outstanding_principal)}.
           </p>
           <BalanceChart
@@ -79,6 +75,7 @@ function Comparison({ role, proposal, fc }) {
 }
 
 export default function RecommendationCard({ role }) {
+  const { t: tr, money: eur } = usePreferences();
   const { state, busy, submit } = useApp();
   const saved = state.assessments[role];
   const unresolved = Object.keys(state.analysis.reconciliation.ambiguous).length;
@@ -87,15 +84,15 @@ export default function RecommendationCard({ role }) {
       <div className="rec-block">
         <p>
           {unresolved
-            ? 'Resolve the invoice matches in Transactions first.'
-            : 'Ask Qwen to review the current forecast and explain a decision.'}
+            ? tr("Resolve the invoice matches in Transactions first.")
+            : tr("Ask Qwen to review the current forecast and explain a decision.")}
         </p>
         <button
           className="btn btn-primary"
           disabled={busy || !!unresolved}
           onClick={() => submit('agents/' + role)}
         >
-          {busy ? 'Working…' : 'Run ' + role + ' agent'}
+          {busy ? tr("Working…") : role === 'liquidity' ? tr('Run liquidity agent') : tr('Run investment agent')}
         </button>
       </div>
     );
@@ -103,26 +100,25 @@ export default function RecommendationCard({ role }) {
   return (
     <div className="rec-block">
       <h4>
-        {labels[p.action]} {p.product && '· ' + eur(p.amount)}
+        {tr(labels[p.action])} {p.product && '· ' + eur(p.amount)}
       </h4>
       {p.product && (
-        <p>
-          Effective {p.execute_on}
-          {p.available_until && ' · Available through ' + p.available_until}
+        <p> {tr("Effective")} {p.execute_on}
+          {p.available_until && ' ' + tr("· Available through") + ' ' + p.available_until}
         </p>
       )}
       {role === 'investment' && (
         <dl className="data-strip">
           <div>
-            <dt>Operations</dt>
+            <dt>{tr("Operations")}</dt>
             <dd>{eur(p.operating_cash)}</dd>
           </div>
           <div>
-            <dt>Safety reserve</dt>
+            <dt>{tr("Safety reserve")}</dt>
             <dd>{eur(p.reserve_cash)}</dd>
           </div>
           <div>
-            <dt>Free to invest</dt>
+            <dt>{tr("Free to invest")}</dt>
             <dd className="amount-pos">{eur(p.free_cash)}</dd>
           </div>
         </dl>
@@ -130,15 +126,15 @@ export default function RecommendationCard({ role }) {
       {role === 'liquidity' && (
         <dl className="data-strip">
           <div>
-            <dt>Lowest projected cash</dt>
+            <dt>{tr("Lowest projected cash")}</dt>
             <dd>{eur(state.analysis.forecast.minimum_balance)}</dd>
           </div>
           <div>
-            <dt>Target reserve</dt>
+            <dt>{tr("Target reserve")}</dt>
             <dd>{eur(state.analysis.forecast.reserve)}</dd>
           </div>
           <div>
-            <dt>Funding gap</dt>
+            <dt>{tr("Funding gap")}</dt>
             <dd>{eur(state.analysis.forecast.funding_needed)}</dd>
           </div>
         </dl>
@@ -148,12 +144,12 @@ export default function RecommendationCard({ role }) {
           <div
             className="allocation"
             role="img"
-            aria-label="Share of cash for operations, reserve and investment"
+            aria-label={tr("Share of cash for operations, reserve and investment")}
           >
             {[p.operating_cash, p.reserve_cash, p.free_cash].map((v, i) => (
               <span
                 key={i}
-                title={['Operations', 'Safety reserve', 'Free to invest'][i] + ' · ' + eur(v)}
+                title={[tr("Operations"), tr("Safety reserve"), tr("Free to invest")][i] + ' · ' + eur(v)}
                 style={{ flex: Number(v) }}
               />
             ))}
@@ -161,12 +157,12 @@ export default function RecommendationCard({ role }) {
         )}
       {role === 'liquidity' && state.analysis.forecast.drivers.length > 0 && (
         <table className="table section">
-          <caption>Planned outflows contributing to the shortfall</caption>
+          <caption>{tr("Planned outflows contributing to the shortfall")}</caption>
           <thead>
             <tr>
-              <th>Payment date</th>
-              <th>Category</th>
-              <th>Amount</th>
+              <th>{tr("Payment date")}</th>
+              <th>{tr("Category")}</th>
+              <th>{tr("Amount")}</th>
             </tr>
           </thead>
           <tbody>
@@ -180,15 +176,15 @@ export default function RecommendationCard({ role }) {
           </tbody>
         </table>
       )}
-      <h4>Risks to consider</h4>
+      <h4>{tr("Risks to consider")}</h4>
       <ul>
         {p.risks.map((r) => (
-          <li key={r}>{r}</li>
+          <li key={r}>{tr(r)}</li>
         ))}
       </ul>
       <div className="badge badge-sim">
-        {saved.status.replace('_', ' ')}{' '}
-        {saved.application_id && ' · Request #' + saved.application_id}
+        {tr(saved.status.replace('_', ' '))}{' '}
+        {saved.application_id && ' · ' + tr('Request #') + saved.application_id}
       </div>
       {saved.status === 'pending' && (
         <div className="modal-actions">
@@ -199,7 +195,7 @@ export default function RecommendationCard({ role }) {
               disabled={busy}
               onClick={() => submit('agents/' + role + '/decision/' + c)}
             >
-              {c === 'approve' ? 'Approve (simulation)' : 'Reject'}
+              {c === 'approve' ? tr("Approve (simulation)") : tr("Reject")}
             </button>
           ))}
         </div>
@@ -208,16 +204,11 @@ export default function RecommendationCard({ role }) {
         <span
           className="decision-lock"
           tabIndex={0}
-          title="Already assessed for this forecast. Change forecast inputs and run the forecast to generate another decision."
+          title={tr("Already assessed for this forecast. Change forecast inputs and run the forecast to generate another decision.")}
         >
-          <button disabled className="btn btn-ghost">
-            Regenerate decision
-          </button>
+          <button disabled className="btn btn-ghost"> {tr("Regenerate decision")} </button>
         </span>
-        <p className="card-sub">
-          Already assessed. Change inputs in Liquidity Agent and run the forecast to enable a new
-          decision.
-        </p>
+        <p className="card-sub"> {tr("Already assessed. Change inputs in Liquidity Agent and run the forecast to enable a new decision.")} </p>
       </div>
       {p.product && (
         <Comparison key={saved.id} role={role} proposal={p} fc={state.analysis.forecast} />

@@ -1,3 +1,4 @@
+import { usePreferences } from '../context/Preferences';
 import React, { useId } from 'react';
 import {
   CartesianGrid,
@@ -11,23 +12,17 @@ import {
   XAxis,
   YAxis,
 } from 'recharts';
-import { eur } from '../lib/api';
 
-const axisMoney = new Intl.NumberFormat('en-IE', {
-  style: 'currency',
-  currency: 'EUR',
-  notation: 'compact',
-  maximumFractionDigits: 2,
-});
 
 export default function BalanceChart({ points, action, reserve, neutral = false }) {
+  const { t: tr, money: eur } = usePreferences();
   const gradient = useId().replace(/:/g, '');
   const data = points.map((p, i) => ({
     day: p.day,
     Balance: Number(p.balance),
     ...(action ? { 'With action': Number(action[i].balance) } : {}),
   }));
-  if (!data.length) return <p>No balances in this period.</p>;
+  if (!data.length) return <p>{tr("No balances in this period.")}</p>;
   const balances = data.map((p) => p.Balance);
   const low = Math.min(...balances);
   const high = Math.max(...balances);
@@ -36,29 +31,23 @@ export default function BalanceChart({ points, action, reserve, neutral = false 
   const floor = Math.min(0, ...all);
   const ceiling = Math.max(0, Number(reserve ?? 0), ...all);
   const split = !neutral && high > 0 && low < 0;
-  const stroke = split ? `url(#${gradient})` : !neutral && low < 0 ? '#ff8797' : '#ffdb66';
+  const stroke = split ? `url(#${gradient})` : !neutral && low < 0 ? 'var(--danger)' : 'var(--primary)';
   return (
     <figure className="balance-figure">
       <figcaption className="chart-key">
         <span>
-          <i className="key-balance" />
-          Balance
-        </span>
+          <i className="key-balance" /> {tr("Balance")} </span>
         {action && (
           <span>
-            <i className="key-action" />
-            With action
-          </span>
+            <i className="key-action" /> {tr("With action")} </span>
         )}
         {reserve != null && (
           <span>
-            <i className="key-reserve" />
-            Reserve {eur(reserve)}
+            <i className="key-reserve" /> {tr("Reserve")} {eur(reserve)}
           </span>
         )}
         {firstNegative && (
-          <strong className={neutral ? 'chart-alert neutral-alert' : 'chart-alert'}>
-            First below zero: {firstNegative.day} ({eur(firstNegative.Balance)})
+          <strong className={neutral ? 'chart-alert neutral-alert' : 'chart-alert'}> {tr("First below zero:")} {firstNegative.day} ({eur(firstNegative.Balance)})
           </strong>
         )}
       </figcaption>
@@ -68,23 +57,23 @@ export default function BalanceChart({ points, action, reserve, neutral = false 
             {split && (
               <defs>
                 <linearGradient id={gradient} x1="0" y1="0" x2="0" y2="1">
-                  <stop offset={high / (high - low)} stopColor="#ffdb66" />
-                  <stop offset={high / (high - low)} stopColor="#ff8797" />
+                  <stop offset={high / (high - low)} stopColor="var(--primary)" />
+                  <stop offset={high / (high - low)} stopColor="var(--danger)" />
                 </linearGradient>
               </defs>
             )}
-            <CartesianGrid stroke="#526080" strokeDasharray="3 5" vertical={false} />
+            <CartesianGrid stroke="var(--border)" strokeDasharray="3 5" vertical={false} />
             <XAxis
               dataKey="day"
               tickFormatter={(v) => v.slice(5)}
               minTickGap={24}
-              stroke="#ccd7ef"
+              stroke="var(--text-muted)"
             />
             <YAxis
               domain={[floor, ceiling || (floor === 0 ? 1 : 0)]}
               width={72}
-              tickFormatter={(v) => axisMoney.format(v)}
-              stroke="#ccd7ef"
+              tickFormatter={(v) => eur(v, true)}
+              stroke="var(--text-muted)"
             />
             <Tooltip
               formatter={(v) => (
@@ -92,38 +81,38 @@ export default function BalanceChart({ points, action, reserve, neutral = false 
                   {eur(v)}
                 </span>
               )}
-              contentStyle={{ background: '#111b32', borderColor: '#7484a6' }}
-              itemStyle={{ color: '#fff' }}
+              contentStyle={{ background: 'var(--bg-card)', borderColor: 'var(--border)' }}
+              itemStyle={{ color: 'var(--text)' }}
             />
             {!neutral && floor < 0 && (
-              <ReferenceArea y1={floor} y2={0} fill="#ff617d" fillOpacity={0.16} />
+              <ReferenceArea y1={floor} y2={0} fill="var(--danger)" fillOpacity={0.16} />
             )}
             <ReferenceLine
               y={0}
-              stroke="#edf2ff"
+              stroke="var(--text-muted)"
               strokeWidth={2}
-              label={{ value: '€0', position: 'insideTopRight', fill: '#edf2ff', fontSize: 13 }}
+              label={{ value: eur(0), position: 'insideTopRight', fill: 'var(--text-muted)', fontSize: 13 }}
             />
             {reserve != null && (
               <ReferenceLine
                 y={Number(reserve)}
-                stroke="#a9c8ff"
+                stroke="var(--accent)"
                 strokeDasharray="7 5"
                 strokeWidth={2}
               />
             )}
             <Line
-              dataKey="Balance"
+              dataKey="Balance" name={tr("Balance")}
               stroke={stroke}
               strokeWidth={3}
               dot={data.length === 1}
-              activeDot={{ r: 5, fill: '#fff' }}
+              activeDot={{ r: 5, fill: 'var(--text)' }}
               isAnimationActive={false}
             />
             {action && (
               <Line
-                dataKey="With action"
-                stroke="#66e8b5"
+                dataKey="With action" name={tr("With action")}
+                stroke="var(--accent)"
                 strokeWidth={3}
                 strokeDasharray="9 3"
                 dot={data.length === 1}
@@ -135,7 +124,7 @@ export default function BalanceChart({ points, action, reserve, neutral = false 
                 x={firstNegative.day}
                 y={firstNegative.Balance}
                 r={5}
-                fill={neutral ? '#ffdb66' : '#ff7188'}
+                fill={neutral ? 'var(--primary)' : 'var(--danger)'}
                 stroke="white"
                 strokeWidth={2}
               />

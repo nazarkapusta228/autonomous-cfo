@@ -1,5 +1,6 @@
+import { usePreferences } from '../context/Preferences';
 import React from 'react';
-import { LayoutDashboard, Droplets, Coins, Receipt, TrendingUp, ListOrdered } from 'lucide-react';
+import { Settings, LayoutDashboard, Droplets, Coins, Receipt, TrendingUp, ListOrdered } from 'lucide-react';
 
 const NAV = [
   { key: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -8,9 +9,11 @@ const NAV = [
   { key: 'tax', label: 'Tax Payments', icon: Receipt },
   { key: 'investment', label: 'Investment Agent', icon: TrendingUp },
   { key: 'transactions', label: 'Transactions', icon: ListOrdered },
+  { key: 'settings', label: 'Settings', icon: Settings },
 ];
 
 export default function Sidebar({ active, onNavigate }) {
+  const { t: tr } = usePreferences();
   return (
     <aside className="sidebar">
       <div className="sidebar-brand">
@@ -28,15 +31,12 @@ export default function Sidebar({ active, onNavigate }) {
               onClick={() => onNavigate(n.key)}
             >
               <Icon size={20} aria-hidden="true" />
-              {n.label}
+              {tr(n.label)}
             </button>
           );
         })}
       </nav>
-      <div className="sidebar-footer">
-        <div style={{ marginBottom: 6 }}>OpenShift AI · Qwen2.5-7B-Instruct</div>
-        <div className="mono">v1.0.0-hackathon</div>
-      </div>
+
     </aside>
   );
 }

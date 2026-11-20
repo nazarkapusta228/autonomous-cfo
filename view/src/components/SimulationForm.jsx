@@ -1,6 +1,7 @@
+import { usePreferences } from '../context/Preferences';
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
-import { eur, nextDay } from '../lib/api';
+import { nextDay } from '../lib/api';
 import { BriefcaseBusiness, Coins } from 'lucide-react';
 import DateField from './DateField';
 import ApprovalModal from './ApprovalModal';
@@ -12,6 +13,7 @@ export default function SimulationForm({
   suggested = '',
   suggestedDate,
 }) {
+  const { t: tr, money: eur } = usePreferences();
   const { state, busy, submit } = useApp();
   const [enteredAmount, setAmount] = useState(null);
   const amount = enteredAmount ?? suggested;
@@ -26,10 +28,10 @@ export default function SimulationForm({
   const noSurplus = fund && assessed && free <= 0;
   const blocked = needsAssessment || noSurplus;
   const labels = {
-    fx_forward: 'Review CHF forward',
-    money_market: 'Review fund enquiry',
-    capex: 'Review equipment financing',
-    tax_prepayment: 'Review tax prepayment',
+    fx_forward: tr("Review CHF forward"),
+    money_market: tr("Review fund enquiry"),
+    capex: tr("Review equipment financing"),
+    tax_prepayment: tr("Review tax prepayment"),
   };
   const lastRate = state.fx.rates.at(-1);
   const unit = fx ? 'CHF' : 'EUR';
@@ -51,8 +53,7 @@ export default function SimulationForm({
         }}
       >
         <div className="controls">
-          <label>
-            Scenario amount ({unit})
+          <label> {tr("Scenario amount (")}{unit})
             <input
               type="number"
               step=".01"
@@ -64,19 +65,17 @@ export default function SimulationForm({
             />
           </label>
           <DateField
-            label="Effective date"
+            label={tr("Effective date")}
             value={date}
             onChange={setDate}
             min={nextDay(state.settings.as_of)}
             shortcuts={[
-              ['Next day', nextDay(state.settings.as_of)],
-              ['Forecast end', state.analysis.forecast.daily_balances.at(-1).day],
+              [tr("Next day"), nextDay(state.settings.as_of)],
+              [tr("Forecast end"), state.analysis.forecast.daily_balances.at(-1).day],
             ]}
           />
           {fx && (
-            <label>
-              Assumed EUR per CHF
-              <input
+            <label> {tr("Assumed EUR per CHF")} <input
                 type="number"
                 required
                 step=".000001"
@@ -89,34 +88,30 @@ export default function SimulationForm({
         </div>
         {fx && (
           <div className="scenario-preview" aria-live="polite">
-            <small>Future payment in EUR</small>
+            <small>{tr("Payment equivalent")}</small>
             <strong>
               {Number(amount) > 0 && Number(rate) > 0 ? eur(Number(amount) * Number(rate)) : '—'}
             </strong>
-            <p>
-              CHF payable × assumed EUR per CHF. A higher rate makes the same CHF bill more
-              expensive.
-            </p>
+            <p> {tr("CHF payable × assumed EUR per CHF. A higher rate makes the same CHF bill more expensive.")} </p>
             {lastRate && (
               <button
                 type="button"
                 className="btn btn-ghost"
                 onClick={() => setRate(lastRate.rate)}
-              >
-                Use last booked rate · {lastRate.rate} ({lastRate.day})
+              > {tr("Use last booked rate ·")} {lastRate.rate} ({lastRate.day})
               </button>
             )}
           </div>
         )}
         {(kind === 'capex' || kind === 'money_market') && (
           <div className="scenario-preview">
-            <small>{kind === 'capex' ? 'Financing requested' : 'Proposed placement'}</small>
+            <small>{kind === 'capex' ? tr("Financing requested") : tr("Proposed placement")}</small>
             <strong>{Number(amount) > 0 ? eur(amount) : '—'}</strong>
             <p>
               {kind === 'capex'
-                ? 'Prepare a simulated lender enquiry for equipment on the selected date.'
-                : 'Free cash limit for this forecast: ' +
-                  (suggested ? eur(suggested) : 'run the investment agent first') +
+                ? tr("Prepare a simulated lender enquiry for equipment on the selected date.")
+                : tr("Free cash limit for this forecast:") + ' ' +
+                  (suggested ? eur(suggested) : tr("run the investment agent first")) +
                   '.'}
             </p>
           </div>
@@ -132,9 +127,9 @@ export default function SimulationForm({
           title={title}
           blockedMessage={
             needsAssessment
-              ? 'Run the investment assessment to calculate the free cash available for this enquiry.'
+              ? tr("Run the investment assessment to calculate the free cash available for this enquiry.")
               : noSurplus
-                ? 'This forecast has no cash available for a fund placement. Review the forecast inputs in Liquidity Agent before requesting a placement.'
+                ? tr("This forecast has no cash available for a fund placement. Review the forecast inputs in Liquidity Agent before requesting a placement.")
                 : ''
           }
           onAssess={
@@ -145,30 +140,30 @@ export default function SimulationForm({
               : undefined
           }
           description={
-            amount + ' ' + unit + ' on ' + date + (fx ? ' at ' + rate + ' EUR per CHF.' : '.')
+            amount + ' ' + unit + ' ' + tr("on") + ' ' + date + (fx ? ' ' + tr("at") + ' ' + rate + ' ' + tr("EUR per CHF.") : '.')
           }
           onApprove={approve}
           onCancel={() => setConfirm(false)}
           busy={busy}
-          confirmLabel="Approve simulation"
+          confirmLabel={tr("Approve simulation")}
         />
       )}
       {records.length > 0 && (
         <table className="table section">
-          <caption>Approved simulations for this forecast</caption>
+          <caption>{tr("Approved simulations for this forecast")}</caption>
           <thead>
             <tr>
-              <th>Record</th>
-              <th>Effective date</th>
-              <th>Amount ({unit})</th>
-              {fx && <th>Estimated EUR at assumed rate</th>}
+              <th>{tr("Record")}</th>
+              <th>{tr("Effective date")}</th>
+              <th>{tr("Amount (")}{unit})</th>
+              {fx && <th>{tr("Estimated payment")}</th>}
             </tr>
           </thead>
           <tbody>
             {records.map((s) => (
               <tr key={s.id}>
                 <td>
-                  <span className="badge badge-sim">Simulated #{s.id}</span>
+                  <span className="badge badge-sim">{tr("Simulated #")}{s.id}</span>
                 </td>
                 <td>{s.basis.effective_on}</td>
                 <td>
@@ -176,7 +171,7 @@ export default function SimulationForm({
                 </td>
                 {fx && (
                   <td>
-                    {eur(s.basis.estimated_eur)} at {s.basis.eur_per_chf} EUR/CHF
+                    {eur(s.basis.estimated_eur)} {tr("at")} {s.basis.eur_per_chf} EUR/CHF
                   </td>
                 )}
               </tr>
