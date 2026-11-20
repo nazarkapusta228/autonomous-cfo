@@ -418,3 +418,20 @@ summary { cursor: pointer; color: var(--accent); }
   .header-actions { margin-left: auto; }
   .user-chip { display: flex; }
 }
+
+.language-buttons { display: inline-flex; align-items: stretch; border: 1px solid var(--border); border-radius: 9px; overflow: hidden; }
+.language-buttons button { display: inline-flex; align-items: center; justify-content: center; gap: .4rem; min-height: 40px; padding: 0 .65rem; font: inherit; font-size: .85rem; font-weight: 650; background: var(--bg-elev); color: var(--text-muted); }
+.language-buttons button[aria-pressed=true] { background: var(--bg-card); color: var(--primary); box-shadow: inset 0 -2px var(--primary); }
+.language-buttons button:focus-visible { outline-offset: -3px; }
+.language-buttons svg { border: 1px solid var(--border); border-radius: 2px; }
+.header { position: relative; z-index: 5; }
+.profile-anchor { position: relative; }
+.profile-popover { position: absolute; right: 0; top: 100%; width: min(23rem, calc(100vw - 24px)); padding-top: 6px; }
+.profile-sheet { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); padding: 1rem; max-height: min(72vh, 36rem); overflow: auto; }
+.profile-sheet > header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
+.profile-sheet .card { box-shadow: none; padding: .85rem; }
+.profile-sheet .controls { flex-direction: column; align-items: stretch; }
+.profile-sheet .setting-row { flex-direction: column; align-items: stretch; gap: .3rem; }
+.profile-sheet .setting-row input { width: 100%; }
+.settings-grid { grid-template-columns: minmax(0, 1fr); max-width: 48rem; }
+.rate-status { color: var(--text-muted); font-size: .875rem; margin-top: .5rem; }

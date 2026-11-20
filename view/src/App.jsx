@@ -9,13 +9,12 @@ import TaxAgent from './components/TaxAgent';
 import InvestmentAgent from './components/InvestmentAgent';
 import Transactions from './components/Transactions';
 
-import Settings, { Profile } from './components/Settings';
+import Settings from './components/Settings';
 import { Preferences } from './context/Preferences';
 import { StatementPeriod, PeriodPicker } from './context/StatementPeriod';
 
 const PAGES = {
   settings: {title:'Settings', subtitle:'Workspace preferences', component:Settings},
-  profile: {title:'Profile', subtitle:'Account details', component:Profile},
   dashboard: {
     title: 'Financial Overview',
     subtitle: 'Cash position and approval history',
@@ -57,7 +56,7 @@ export default function App() {
       <div className="app-shell">
         <Sidebar active={active} onNavigate={setActive} />
         <div className="main-area">
-          <Header onProfile={() => setActive('profile')} title={PAGES[active].title} subtitle={PAGES[active].subtitle} />
+          <Header title={PAGES[active].title} subtitle={PAGES[active].subtitle} />
           <div className="content">
             {['dashboard','transactions','fx','tax'].includes(active) && <PeriodPicker />}
             <Page />

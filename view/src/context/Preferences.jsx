@@ -1,8 +1,9 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
+import { useExchangeRates } from '../lib/exchangeRates';
 import polish from '../lib/polish.json';
 
 const Context = createContext(null);
-const defaults = { language: 'en', theme: 'dark', size: 'medium', currency: 'EUR', rate: '', low: true, change: true, approval: true };
+const defaults = { language: 'en', theme: 'dark', size: 'medium', currency: 'EUR', low: true, change: true, approval: true };
 const key = 'cfo.preferences.v1';
 
 export function Preferences({ children }) {
@@ -10,6 +11,8 @@ export function Preferences({ children }) {
     try { return { ...defaults, ...JSON.parse(localStorage.getItem(key)) }; }
     catch { return defaults; }
   });
+  const exchange = useExchangeRates();
+  const rate = prefs.currency === 'EUR' ? 1 : exchange.table?.rates[prefs.currency];
   const update = (values) => setPrefs(previous => ({ ...previous, ...values }));
   useEffect(() => {
     document.documentElement.lang = prefs.language;
@@ -20,9 +23,9 @@ export function Preferences({ children }) {
   const t = (english, pl) => prefs.language === 'pl' ? (pl ?? polish[english] ?? english) : english;
   const locale = prefs.language === 'pl' ? 'pl-PL' : 'en-IE';
   const money = (eur, compact = false) => new Intl.NumberFormat(locale, {
-    style: 'currency', currency: prefs.currency, ...(compact ? { notation: 'compact' } : {}),
-  }).format(Number(eur) * (prefs.currency === 'EUR' ? 1 : Number(prefs.rate)));
-  return <Context.Provider value={{ prefs, update, t, money, locale }}>{children}</Context.Provider>;
+    style: 'currency', currency: rate ? prefs.currency : 'EUR', ...(compact ? { notation: 'compact' } : {}),
+  }).format(Number(eur) * (rate ?? 1));
+  return <Context.Provider value={{ prefs, update, t, money, locale, exchange }}>{children}</Context.Provider>;
 }
 
 export const usePreferences = () => useContext(Context);

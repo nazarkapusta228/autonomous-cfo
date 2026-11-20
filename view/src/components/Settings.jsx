@@ -1,10 +1,8 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { usePreferences } from '../context/Preferences';
 
 export default function Settings() {
-  const { prefs, update, t } = usePreferences();
-  const [currency, setCurrency] = useState(prefs.currency);
-  const [rate, setRate] = useState(prefs.rate);
+  const { prefs, update, t, exchange, locale } = usePreferences();
   return <div className="settings-grid">
     <section className="card"><h3>{t('Appearance', 'Wygląd')}</h3>
       {[
@@ -16,14 +14,20 @@ export default function Settings() {
         </select></label>)}
     </section>
     <section className="card"><h3>{t('Reporting currency', 'Waluta raportowa')}</h3>
-      <form onSubmit={e => { e.preventDefault(); update({currency, rate: currency === 'EUR' ? '' : rate}); }}>
-        <label className="setting-row">{t('Currency', 'Waluta')}<select value={currency} onChange={e => { setCurrency(e.target.value); setRate(''); }}>
-          {['EUR','PLN','USD','CHF'].map(code => <option key={code}>{code}</option>)}</select></label>
-        {currency !== 'EUR' && <label className="setting-row">{currency} / 1 EUR
-          <input type="number" required min="0.000001" step="any" value={rate} onChange={e => setRate(e.target.value)} /></label>}
-        <p className="card-sub">{t('Reports use your exchange rate. Payments retain their original currencies.', 'Raporty korzystają z podanego kursu. Płatności zachowują waluty źródłowe.')}</p>
-        <button className="btn btn-primary" disabled={currency === prefs.currency && (currency === 'EUR' || rate === prefs.rate)}>{t('Apply currency','Zastosuj walutę')}</button>
-      </form>
+      <label className="setting-row">{t('Currency', 'Waluta')}
+        <select value={prefs.currency} onChange={e => update({ currency: e.target.value })}>
+          {['EUR','PLN','USD','CHF'].map(code => <option key={code}>{code}</option>)}
+        </select>
+      </label>
+      {prefs.currency !== 'EUR' && <div aria-live="polite" className="rate-status">
+        {exchange.table && <p>1 EUR = {exchange.table.rates[prefs.currency].toLocaleString(locale, {maximumFractionDigits: 4})} {prefs.currency}
+          {' · NBP · '}{exchange.table.date}</p>}
+        {!exchange.table && !exchange.failed && <p>{t('Fetching the latest rate. Showing EUR.', 'Pobieranie kursu. Kwoty w EUR.')}</p>}
+        {exchange.failed && <><p>{exchange.table
+          ? t('Update unavailable. Using the rate above.', 'Aktualizacja niedostępna. Obowiązuje powyższy kurs.')
+          : t('Rate unavailable. Showing EUR.', 'Kurs niedostępny. Kwoty w EUR.')}</p>
+          <button className="btn btn-ghost" onClick={exchange.retry}>{t('Retry')}</button></>}
+      </div>}
     </section>
     <section className="card wide"><h3>{t('Dashboard notifications', 'Powiadomienia na pulpicie')}</h3>
       {[
