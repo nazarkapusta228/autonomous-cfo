@@ -73,13 +73,18 @@ def parse_cash_flow_plan(content: bytes) -> list[PlannedCashFlow]:
     columns = ("date", "category", "amount_eur", "description")
     try:
         header = reader.fieldnames or []
-        if len(header) != len(columns) or set(header) != set(columns):
+        if len(set(header)) != len(header) or set(header) not in (
+            set(columns),
+            {*columns, "invoice_id"},
+        ):
             raise ValueError(f"Cash flow plan columns must be {', '.join(columns)}")
         flows = []
         for row in reader:
             try:
                 if None in row or any(value is None for value in row.values()):
-                    raise ValueError("Expected four fields")
+                    raise ValueError("Unexpected or missing CSV fields")
+                if "invoice_id" in row and not row["invoice_id"].strip():
+                    row["invoice_id"] = None
                 flows.append(PlannedCashFlow.model_validate(row))
             except ValueError as exc:
                 raise ValueError(f"Cash flow plan row {reader.line_num}: {exc}") from exc

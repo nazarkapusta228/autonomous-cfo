@@ -1,6 +1,7 @@
 from collections import defaultdict
 from datetime import date, timedelta
 from decimal import Decimal
+from typing import Literal
 
 from cfo.models import ForecastPoint, LiquidityForecast, PlannedCashFlow, Transaction
 
@@ -99,7 +100,12 @@ def build_liquidity_forecast(
 
 
 def validate_proposal(
-    action: str, amount: Decimal, points: list[ForecastPoint], reserve: Decimal
+    action: str,
+    amount: Decimal,
+    points: list[ForecastPoint],
+    reserve: Decimal,
+    *,
+    agent: Literal["liquidity", "investment"] = "liquidity",
 ) -> None:
     """Guardrail for a complete future horizon, including its opening balance."""
     if not points or not reserve.is_finite() or reserve < 0:
@@ -107,7 +113,7 @@ def validate_proposal(
     if not amount.is_finite() or amount < 0:
         raise ValueError("Invalid amount")
     minimum = min(point.balance for point in points)
-    if action == "hold" and amount == 0:
+    if action == "hold" and amount == 0 and (agent == "investment" or minimum >= reserve):
         return
     if action == "propose_credit" and minimum < reserve and amount == reserve - minimum:
         return

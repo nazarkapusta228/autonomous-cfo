@@ -33,6 +33,7 @@ class PlannedCashFlow(BaseModel):
     category: str = Field(min_length=1)
     amount_eur: Money
     description: str = Field(min_length=1)
+    invoice_id: str | None = Field(default=None, min_length=1)
 
 
 class LiquidityForecast(BaseModel):
