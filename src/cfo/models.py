@@ -27,6 +27,28 @@ class ForecastPoint(BaseModel):
     balance: Money
 
 
+class PlannedCashFlow(BaseModel):
+    model_config = ConfigDict(frozen=True, extra="forbid", str_strip_whitespace=True)
+    date: date
+    category: str = Field(min_length=1)
+    amount_eur: Money
+    description: str = Field(min_length=1)
+
+
+class LiquidityForecast(BaseModel):
+    model_config = ConfigDict(frozen=True, extra="forbid")
+    as_of: date
+    opening_balance: Money
+    reserve: Annotated[Money, Field(ge=0)]
+    daily_balances: list[ForecastPoint]
+    first_deficit_on: date | None
+    minimum_balance: Money
+    minimum_on: date
+    funding_needed: Annotated[Money, Field(ge=0)]
+    funding_needed_by: date | None
+    drivers: list[PlannedCashFlow]
+
+
 class Recommendation(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
 

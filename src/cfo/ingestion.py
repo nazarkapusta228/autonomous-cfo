@@ -1,13 +1,14 @@
-"""Parser for the supplied German-format sample statement, not arbitrary bank exports."""
+"""Parsers for the sample bank statement and planned EUR cash flows."""
 
 import re
+from csv import DictReader, Error
 from datetime import datetime
 from decimal import ROUND_HALF_UP, Decimal
-from io import BytesIO
+from io import BytesIO, StringIO
 
 import pandas as pd
 
-from cfo.models import Transaction
+from cfo.models import PlannedCashFlow, Transaction
 
 REQUIRED = {
     "Account Number",
@@ -64,3 +65,24 @@ def parse_statement(content: bytes) -> list[Transaction]:
         except ValueError as exc:
             raise ValueError(f"CSV row {number}: {exc}") from exc
     return sorted(result, key=lambda transaction: (transaction.value_on, transaction.source_row))
+
+
+def parse_cash_flow_plan(content: bytes) -> list[PlannedCashFlow]:
+    """Read a UTF-8 CSV with ISO dates and signed EUR amounts using a decimal point."""
+    reader = DictReader(StringIO(content.decode("utf-8-sig"), newline=""), strict=True)
+    columns = ("date", "category", "amount_eur", "description")
+    try:
+        header = reader.fieldnames or []
+        if len(header) != len(columns) or set(header) != set(columns):
+            raise ValueError(f"Cash flow plan columns must be {', '.join(columns)}")
+        flows = []
+        for row in reader:
+            try:
+                if None in row or any(value is None for value in row.values()):
+                    raise ValueError("Expected four fields")
+                flows.append(PlannedCashFlow.model_validate(row))
+            except ValueError as exc:
+                raise ValueError(f"Cash flow plan row {reader.line_num}: {exc}") from exc
+    except Error as exc:
+        raise ValueError(f"Cash flow plan row {reader.line_num}: {exc}") from exc
+    return sorted(flows, key=lambda flow: flow.date)
