@@ -1,4 +1,12 @@
 {
+  "Expenses covered by receipts": "Durch Einnahmen gedeckte Ausgaben",
+  "Forecast receipts as a share of forecast spending, capped at 100%.": "Prognostizierte Einnahmen im Verhältnis zu Ausgaben, maximal 100 %.",
+  "First reserve shortfall": "Erste Reserveunterschreitung",
+  "Model window (months)": "Modellfenster (Monate)",
+  "Recency weighted": "Neuere Daten stärker gewichtet",
+  "Simple average": "Einfacher Mittelwert",
+  "Months backtested": "Geprüfte Monate",
+  "Known payments and invoices are scheduled first. The selected model estimates the remaining monthly receipts and spending.": "Geplante Zahlungen und Rechnungen haben Vorrang. Das Modell schätzt die übrigen monatlichen Einnahmen und Ausgaben.",
   "Days meeting cash reserve": "Tage mit gedeckter Reserve",
   "Share of forecast days ending at or above your cash reserve.": "Anteil der Prognosetage, an denen der Endsaldo die Liquiditätsreserve deckt.",
   "Forecast cash difference": "Prognostizierte Saldoänderung",

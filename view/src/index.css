@@ -601,13 +601,18 @@ input, select, textarea { font-family: inherit; }
   box-shadow: inset 3px 0 var(--primary);
 }
 @media (prefers-reduced-motion: no-preference) {
-  .content { animation: page-enter .22s ease-out; }
-  @keyframes page-enter { from { opacity: .55; } to { opacity: 1; } }
+  .content { animation: page-enter .32s ease-out; }
+  @keyframes page-enter { from { opacity: .25; } to { opacity: 1; } }
 }
 @media (prefers-reduced-motion: reduce) { .nav-item { transition: none; } }
-.operating-scenario > h3, .operating-scenario > .card-sub { text-align: center; }
-.operating-scenario .data-tools { justify-content: center; }
+.operating-scenario, .operating-scenario label, .operating-scenario input, .operating-scenario select { text-align: left; }
+.operating-scenario .data-tools { justify-content: flex-start; }
 .trend-card { padding-bottom: .75rem; }
 .trend-toggle { margin-top: .6rem; }
-.glossary-dismiss { display: flex; margin-inline-start: auto; }
+.glossary-list { padding-bottom: 1rem; }
+.glossary-dismiss { display: flex; margin: 1rem auto 0; }
+.sidebar-brand img { border-radius: 50%; }
+.decision-summary ~ .rec-block { margin-top: 1.25rem; }
 .transactions-table tr > :nth-child(n+4) { width: 1%; white-space: nowrap; text-align: right; padding-inline: .3rem; }
+
+.forecast-fields { border: 0; padding: 0; }

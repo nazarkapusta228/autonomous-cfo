@@ -35,7 +35,7 @@ def test_workspace_isolation_uploads_and_stale_edits(postgres_url, monkeypatch):
     owner, guest = client(), client()
     first, other = state(owner), state(guest)
     assert first["revision"] != other["revision"]
-    assert first["analysis"]["forecast"]["funding_needed"] == "0.00"
+    assert first["analysis"]["forecast"]["funding_needed"] == "2171.61"
     item = first["transactions"][0]
     edit = dict(
         revision=first["revision"],
@@ -181,7 +181,8 @@ def test_data_files_edits_exports_and_deletion(postgres_url, monkeypatch):
     assert save(
         "data/plan/import", filename="plan.json", content=plan_json, mapping=preview["mapping"]
     ).is_success
-    assert state(owner)["analysis"]["plan"][0]["amount_eur"] == "-250.00"
+    flows = state(owner)["analysis"]["plan"]
+    assert [f["amount_eur"] for f in flows if f["description"] == "Office"] == ["-250.00"]
     with psycopg.connect(postgres_url) as conn:
         scope = conn.execute("SELECT workspace_id FROM web_data_files LIMIT 1").fetchone()[0]
     assert owner.post("/api/account/delete", json={"password": "test-only-password"}).is_success

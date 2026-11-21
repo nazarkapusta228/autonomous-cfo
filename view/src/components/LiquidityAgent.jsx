@@ -1,8 +1,7 @@
 import OperatingScenario from './OperatingScenario';
 import { usePreferences } from '../context/Preferences';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useApp } from '../context/AppContext';
-import { api } from '../lib/api';
 import PlannedEditor from './PlannedEditor';
 import DateField from './DateField';
 import BalanceChart from './BalanceChart';
@@ -12,6 +11,20 @@ function Inputs() {
   const { t: tr } = usePreferences();
   const { state, busy, submit } = useApp();
   const [settings, setSettings] = useState(state.settings);
+  useEffect(() => { setSettings(state.settings); lastAttempt.current = null; }, [state.revision]);
+  const form = useRef(null);
+  const pending = useRef(null);
+  const lastAttempt = useRef(null);
+  const signature = JSON.stringify(settings);
+  useEffect(() => {
+    if (busy || !form.current?.checkValidity() || signature === lastAttempt.current ||
+        Object.keys(settings).every(key => String(settings[key]) === String(state.settings[key]))) return;
+    pending.current = setTimeout(() => {
+      lastAttempt.current = signature;
+      submit('forecast', {settings});
+    }, 750);
+    return () => clearTimeout(pending.current);
+  }, [signature, busy, state.revision]);
   const fields = [
     [tr("Cut-off date"), 'as_of', 'date'],
     [tr("Safety reserve (€)"), 'reserve', 'number'],
@@ -19,13 +32,15 @@ function Inputs() {
   ];
   async function run(e) {
     e.preventDefault();
+    clearTimeout(pending.current);
+    lastAttempt.current = signature;
     await submit('forecast', {settings});
   }
   return (
-    <form className="card mb-4" onSubmit={run}>
+    <form ref={form} className="card mb-4" onSubmit={run}>
       <div className="card-title">{tr("Forecast settings")}</div>
       <div className="card-sub"> {tr("Booked movements through the cut-off set the forecast starting point. The reserve is the minimum cash cushion you want to keep.")} </div>
-      <div className="controls">
+      <fieldset disabled={busy} className="controls forecast-fields">
         {fields.map(([label, key, type]) =>
           type === 'date' ? (
             <DateField
@@ -50,7 +65,7 @@ function Inputs() {
             </label>
           ),
         )}
-      </div>
+      </fieldset>
       <button className="btn btn-primary" disabled={busy}>
         {busy ? tr("Working…") : tr("Run forecast")}
       </button>
@@ -83,7 +98,7 @@ function FlowTable({ flows, risk = false, showSource = false }) {
             <td>{flow.description}</td>
             <td>{tr(flow.category)}</td>
             {showSource && (
-              <td>{flow.invoice_id ? tr("Invoice") + ' ' + flow.invoice_id : state.uses_statement_projection ? tr("Statement projection","Prognoza z wyciągu") : tr("Cash flow plan")}</td>
+              <td>{flow.invoice_id ? tr("Invoice") + ' ' + flow.invoice_id : state.analysis.projection_keys.includes(state.plan_keys[start+i]) ? tr("Statement projection","Prognoza z wyciągu") : tr("Cash flow plan")}</td>
             )}
             <td
               className={'numeric ' + (Number(flow.amount_eur) < 0 ? 'amount-neg' : 'amount-pos')}
@@ -106,33 +121,27 @@ function FlowTable({ flows, risk = false, showSource = false }) {
   );
 }
 
-function ForecastChart({ revision }) {
+function ForecastChart() {
   const { t, money } = usePreferences();
-  const [quarters, setQuarters] = useState(1);
-  const [result, setResult] = useState(null);
-  const [attempt, setAttempt] = useState(0);
-  useEffect(() => {
-    let active = true;
-    api('forecast/chart?' + new URLSearchParams({ revision, quarters }))
-      .then(forecast => { if (active) setResult({ quarters, forecast }); })
-      .catch(() => { if (active) setResult({ quarters, failed: true }); });
-    return () => { active = false; };
-  }, [revision, quarters, attempt]);
-  const current = result?.quarters === quarters ? result : null;
-  const f = current?.forecast;
+  const { state, busy, submit } = useApp();
+  const f = state.analysis.forecast;
+  function horizon(months) {
+    const start = new Date(f.as_of + 'T00:00:00Z');
+    const end = new Date(Date.UTC(start.getUTCFullYear(), start.getUTCMonth() + months + 1, 0));
+    end.setUTCDate(Math.min(start.getUTCDate(), end.getUTCDate()));
+    return Math.round((end - start) / 86400000);
+  }
   return <section className="card">
     <h3>{t('Cash balance forecast')}</h3>
     <div className="controls quarter-picker" role="group" aria-label={t('Forecast period', 'Okres prognozy')}>
-      {[1, 2, 3, 4].map(n => <button key={n} className="btn btn-ghost" aria-pressed={quarters === n}
-        onClick={() => setQuarters(n)}>{n} {n === 1 ? t('quarter', 'kwartał') : t('quarters', 'kwartały')}</button>)}
+      {[1, 2, 3].map(n => <button key={n} className="btn btn-ghost" disabled={busy} aria-pressed={state.settings.horizon_days === horizon(n)}
+        onClick={() => submit('forecast', {settings: {...state.settings, horizon_days: horizon(n)}})}>{t(['1 month', '2 months', '3 months'][n-1])}</button>)}
     </div>
-    {f ? <>
+    <>
       <p className="card-sub">{f.as_of} – {f.daily_balances.at(-1).day} · {t('Reserve')} {money(f.reserve)} ·
         {' '}{t('Lowest projected cash')} {money(f.minimum_balance)} ({f.minimum_on})</p>
       <BalanceChart centered forecast neutral points={[{ day: f.as_of, balance: f.opening_balance }, ...f.daily_balances]} reserve={f.reserve}/>
-    </> : current?.failed ? <p role="alert">{t('Forecast unavailable.', 'Prognoza niedostępna.')} <button className="btn btn-ghost"
-      onClick={() => { setResult(null); setAttempt(previous => previous + 1); }}>{t('Retry')}</button></p>
-      : <p role="status">{t('Loading forecast…', 'Wczytywanie prognozy…')}</p>}
+    </>
   </section>;
 }
 
@@ -144,13 +153,19 @@ export default function LiquidityAgent() {
   const riskDay = f.daily_balances.find((point) => point.day === a.payments_at_risk[0]?.date);
   return (
     <>
-      <Inputs key={state.revision} />
+      <Inputs />
       <div className="liquidity-results">
+        <ForecastChart />
         <section className="card">
           <div className="card-title">{tr("Liquidity decision")}</div>
+          <dl className="data-strip decision-summary">
+            <div><dt>{tr('Funding needed')}</dt><dd>{eur(f.funding_needed)}</dd></div>
+            <div><dt>{tr('First reserve shortfall')}</dt><dd>{f.funding_needed_by || tr('None in horizon')}</dd></div>
+            <div><dt>{tr('Lowest projected cash')}</dt><dd>{eur(f.minimum_balance)} · {f.minimum_on}</dd></div>
+          </dl>
+          <p className="card-sub">{tr('Model window (months)')} · {a.model_window} · {a.weighted_model ? tr('Recency weighted') : tr('Simple average')} · {tr('Months backtested')} · {a.validation_months}</p>
           <RecommendationCard role="liquidity" />
         </section>
-        <ForecastChart key={state.revision} revision={state.revision} />
       </div>
       <OperatingScenario key={'scenario-' + state.revision} analysis={a} />
       <section className="card mb-4">
@@ -216,7 +231,7 @@ export default function LiquidityAgent() {
       </section>
       <section className="card">
         <div className="card-title">{tr("Planned payments and income")}</div>
-        <p className="card-sub"> {state.uses_statement_projection ? tr("The baseline repeats known payments from the last four weeks every 28 days. Outstanding invoices are added separately.", "Prognoza powtarza co 28 dni operacje z ostatnich czterech tygodni. Nierozliczone faktury są doliczane osobno.") : tr("Expected movements in this forecast come from the cash flow plan CSV and eligible outstanding invoices.")} </p>
+        <p className="card-sub"> {tr('Known payments and invoices are scheduled first. The selected model estimates the remaining monthly receipts and spending.')} </p>
         {a.plan.length ? (
           <FlowTable key={state.revision} flows={a.plan} showSource />
         ) : (

@@ -53,11 +53,10 @@ export function CashOverview() {
     state.analysis,
     state.transactions.length > 0 || state.analysis.plan.length > 0,
   );
-  const days = fc.daily_balances;
-  const reserve = cents(fc.reserve);
-  const reserveCoverage = days.length && (state.transactions.length || state.analysis.plan.length)
-    ? Math.round(100 * days.filter(point => cents(point.balance) >= reserve).length / days.length)
-    : null;
+  const amounts = state.analysis.plan.map(flow => cents(flow.amount_eur));
+  const receipts = amounts.reduce((sum, amount) => sum + Math.max(0, amount), 0);
+  const spending = amounts.reduce((sum, amount) => sum + Math.max(0, -amount), 0);
+  const incomeCoverage = spending ? Math.min(100, Math.round(100 * receipts / spending)) : null;
   const due = r.outstanding
     .filter((i) => Number(i.amount_eur) < 0)
     .reduce((s, i) => s - cents(i.amount_eur), 0);
@@ -92,9 +91,9 @@ export function CashOverview() {
         )}
       />
       <Ring
-        value={reserveCoverage}
-        label={t('Days meeting cash reserve')}
-        detail={t('Share of forecast days ending at or above your cash reserve.')}
+        value={incomeCoverage}
+        label={t('Expenses covered by receipts')}
+        detail={t('Forecast receipts as a share of forecast spending, capped at 100%.')}
       />
     </section>
   );

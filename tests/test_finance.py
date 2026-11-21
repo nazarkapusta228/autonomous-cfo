@@ -76,11 +76,11 @@ def test_demo_forecast_uses_only_history_known_at_cutoff():
     )
     assert len(forecast.daily_balances) == 45
     assert forecast.daily_balances[0].day == date(2025, 6, 1)
-    assert forecast.daily_balances[0].balance == Decimal("2325.27")
+    assert forecast.daily_balances[0].balance == Decimal("-2072.82")
     assert forecast.daily_balances[-1].day == date(2025, 7, 15)
-    assert forecast.daily_balances[-1].balance == Decimal("10722.88")
-    assert forecast.minimum_balance == Decimal("2065.49")
-    assert forecast.funding_needed == 0
+    assert forecast.daily_balances[-1].balance == Decimal("1754.01")
+    assert forecast.minimum_balance == Decimal("-2171.61")
+    assert forecast.funding_needed == Decimal("2171.61")
     assert statement_projection(historical, CUTOFF, 45) == statement_projection(
         transactions, CUTOFF, 45
     )

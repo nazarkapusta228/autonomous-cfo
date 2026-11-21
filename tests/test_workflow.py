@@ -67,7 +67,7 @@ def test_approval_is_atomic_and_idempotent_on_concurrent_clicks(postgres_url, ex
     with psycopg.connect(postgres_url) as conn:
         assert conn.execute(
             "SELECT amount_eur, planned_on FROM simulated_applications"
-        ).fetchall() == [(Decimal("493.69"), date(2025, 5, 31))]
+        ).fetchall() == [(Decimal("4671.61"), date(2025, 5, 31))]
         with pytest.raises(psycopg.Error, match="immutable"):
             conn.execute("UPDATE recommendations SET scenario='{}' WHERE id=%s", (item.id,))
 

@@ -405,9 +405,10 @@ def edit_planned(request: Request, body: PlannedEdit):
             raise ValueError("Select a current forecast entry and a date after the cutoff")
         changes = body.model_dump(mode="json", exclude={"key", "revision"})
         current_flow = analysis.plan[analysis.plan_keys.index(body.key)]
-        if row["plan"] and not current_flow.invoice_id:
+        plan_entries = dict(keyed_flows(parse_cash_flow_plan(row["plan"]))) if row["plan"] else {}
+        if not current_flow.invoice_id and body.key in plan_entries:
             updated = []
-            for key, flow in keyed_flows(parse_cash_flow_plan(row["plan"])):
+            for key, flow in plan_entries.items():
                 if key == body.key:
                     flow = PlannedCashFlow.model_validate(flow.model_dump() | changes)
                 updated.append(flow.model_dump(mode="json"))

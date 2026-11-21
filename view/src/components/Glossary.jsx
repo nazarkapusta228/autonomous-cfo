@@ -146,6 +146,12 @@ export default function Glossary() {
         <dialog
           ref={dialog}
           className="message-dialog glossary-list"
+          onClick={event => {
+            if (event.target !== event.currentTarget) return;
+            const r = event.currentTarget.getBoundingClientRect();
+            if (event.clientX < r.left || event.clientX > r.right || event.clientY < r.top || event.clientY > r.bottom)
+              event.currentTarget.close();
+          }}
           onClose={() => {
             setList(false);
             button.current?.focus();

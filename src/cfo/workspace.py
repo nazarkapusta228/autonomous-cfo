@@ -15,7 +15,6 @@ from pydantic import BaseModel, ConfigDict, Field
 from cfo.analysis import prepare_analysis
 from cfo.db import import_statement
 from cfo.finance import daily_balances
-from cfo.forecast_tools import daily_error_scale
 from cfo.ingestion import parse_statement
 from cfo.ledger import categorize, load_categories, load_invoice_decisions, parse_invoices
 from cfo.models import Money
@@ -184,7 +183,7 @@ def snapshot(conn, dsn, row):
         },
         statement_info=statement_info,
         plan_keys=analysis.plan_keys,
-        daily_error_scale=daily_error_scale(visible, cutoff),
+        daily_error_scale=analysis.error_scale,
         uses_statement_projection=not row["plan"],
         revision=row["revision"],
         settings=row["settings"],

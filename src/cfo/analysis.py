@@ -1,5 +1,6 @@
 """Prepare the same dated analysis for both agents and the dashboard."""
 
+from calendar import monthrange
 from collections import Counter
 from datetime import date, timedelta
 from decimal import Decimal
@@ -12,6 +13,7 @@ from cfo.finance import balance_as_of, build_liquidity_forecast
 from cfo.ingestion import parse_cash_flow_plan, parse_statement
 from cfo.ledger import Reconciliation, parse_invoices, reconcile_invoices
 from cfo.models import LiquidityForecast, Money, PlannedCashFlow
+from cfo.monthly_forecast import project, supplement
 
 
 class Analysis(BaseModel):
@@ -20,6 +22,11 @@ class Analysis(BaseModel):
     statement_sha256: str
     starting_balance: Money
     forecast: LiquidityForecast
+    error_scale: float | None = None
+    weighted_model: bool = False
+    model_window: int = 1
+    validation_months: int = 0
+    projection_keys: list[str] = Field(default_factory=list)
     plan_keys: list[str] = Field(default_factory=list)
     plan: list[PlannedCashFlow]
     reconciliation: Reconciliation
@@ -28,25 +35,7 @@ class Analysis(BaseModel):
 
 
 def statement_projection(transactions, as_of, horizon_days):
-    """Repeat the last four weeks of known bookings on the same weekdays."""
-    start = as_of - timedelta(days=27)
-    end = as_of + timedelta(days=horizon_days)
-    flows = []
-    for entry in transactions:
-        if entry.booked_on > as_of or not start <= entry.value_on <= as_of:
-            continue
-        day = entry.value_on + timedelta(weeks=4)
-        while day <= end:
-            flows.append(
-                PlannedCashFlow(
-                    date=day,
-                    category=entry.kind,
-                    amount_eur=entry.amount_eur,
-                    description=f"{entry.reference} ({entry.value_on})",
-                )
-            )
-            day += timedelta(weeks=4)
-    return flows
+    return project(transactions, as_of, horizon_days)[0]
 
 
 def keyed_flows(flows):
@@ -72,11 +61,12 @@ def prepare_analysis(
 ) -> Analysis:
     """Link plan rows by invoice_id; unlinked rows are independent assumptions."""
     transactions = parse_statement(statement)
-    assumptions = (
-        parse_cash_flow_plan(plan)
-        if plan
-        else statement_projection(transactions, as_of, horizon_days)
+    end = as_of + timedelta(days=horizon_days)
+    month_end = end.replace(day=monthrange(end.year, end.month)[1])
+    projected, (window, weighted), folds, scale = project(
+        transactions, as_of, (month_end - as_of).days
     )
+    assumptions = parse_cash_flow_plan(plan) if plan else []
     invoice_rows = parse_invoices(invoices) if invoices is not None else []
     reconciliation = reconcile_invoices(
         transactions, invoice_rows, as_of=as_of, confirmed=confirmed
@@ -92,8 +82,14 @@ def prepare_analysis(
             raise ValueError(f"Linked amount differs from invoice {row.invoice_id}")
         linked.add(row.invoice_id)
     flows = [row for row in assumptions if row.invoice_id is None] + reconciliation.planned_flows
+    parties = {key: invoice.counterparty for key, invoice in by_id.items()}
+    known_count = len(flows)
+    flows += supplement(projected, [f for f in flows if as_of < f.date <= month_end], parties)
     keyed = []
-    for key, flow in keyed_flows(flows):
+    projection_keys = set()
+    for index, (key, flow) in enumerate(keyed_flows(flows)):
+        if index >= known_count:
+            projection_keys.add(key)
         changes = (planned_edits or {}).get(key, {})
         keyed.append((key, PlannedCashFlow.model_validate(flow.model_dump() | changes)))
     flows = [f for _, f in keyed]
@@ -135,11 +131,16 @@ def prepare_analysis(
             )
         )
     return Analysis(
+        error_scale=scale,
+        model_window=window,
+        weighted_model=weighted,
+        validation_months=folds,
         statement_sha256=sha256(statement).hexdigest(),
         starting_balance=starting_balance,
         forecast=forecast,
         plan=flows,
         plan_keys=[key for key, _ in visible],
+        projection_keys=[key for key, _ in visible if key in projection_keys],
         reconciliation=reconciliation,
         receipt_delays=delays,
         payments_at_risk=[flow for flow in risky if flow.date == risky[0].date],

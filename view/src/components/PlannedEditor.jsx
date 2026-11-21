@@ -39,7 +39,7 @@ export default function PlannedEditor({ index, close }) {
           />
         </label>
       ))}
-      <small>{state.uses_statement_projection || row.invoice_id ? t('This edits the forecast assumption. The source booking or invoice stays as recorded.','Zmieniasz założenie prognozy. Zapis źródłowy pozostaje bez zmian.') : t('Saves to the current cash flow plan.','Zapisuje w bieżącym planie przepływów.')}</small>
+      <small>{state.analysis.projection_keys.includes(state.plan_keys[index]) || row.invoice_id ? t('This edits the forecast assumption. The source booking or invoice stays as recorded.','Zmieniasz założenie prognozy. Zapis źródłowy pozostaje bez zmian.') : t('Saves to the current cash flow plan.','Zapisuje w bieżącym planie przepływów.')}</small>
       <button className="btn btn-primary" disabled={busy}>
         {t('Save forecast change', 'Zapisz zmianę prognozy')}
       </button>
