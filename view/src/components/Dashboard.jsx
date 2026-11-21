@@ -30,7 +30,7 @@ export default function Dashboard() {
     [
       tr("Funding needed"),
       eur(fc.funding_needed),
-      tr("Cash needed to keep the balance at or above the reserve."),
+      tr('Forecast shortfall against the reserve of', 'Prognozowany niedobór względem rezerwy') + ' ' + eur(fc.reserve) + '.',
       false,
     ],
   ];

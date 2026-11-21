@@ -400,6 +400,7 @@ export function Profile() {
     [msg, setMsg] = useState(''),
     [error, setError] = useState('');
   const [delivery, setDelivery] = useState(null);
+  const [pending, setPending] = useState(null);
   const labels = {
     names: t('Edit name', 'Zmień dane'),
     email: t('Change email', 'Zmień e-mail'),
@@ -440,13 +441,47 @@ export function Profile() {
   }
   return (
     <div className="account-form">
-      <strong>
-        {user.first_name} {user.last_name}
-      </strong>
-      <p>{user.email}</p>
-      {!mode ? (
+      {['', 'names', 'email'].includes(mode) ? (
+        <div className="account-form" hidden={Boolean(pending)}>
+          {['names', 'email'].map(action => (
+            <form key={action} className="account-form"
+              onSubmit={e => {
+                e.preventDefault();
+                if (mode !== action || busy) return;
+                setError('');
+                setPending(Object.fromEntries(new FormData(e.currentTarget)));
+              }}>
+              {(action === 'names' ? ['first_name', 'last_name'] : ['email']).map(key => (
+                <label key={key}>
+                  {{ first_name: t('First name', 'Imię'), last_name: t('Last name', 'Nazwisko'), email: t('Email', 'Adres e-mail') }[key]}
+                  <input name={key} required type={key === 'email' ? 'email' : 'text'}
+                    defaultValue={user[key]} maxLength={key === 'email' ? 254 : 100}
+                    disabled={busy || Boolean(mode && mode !== action)}
+                    onChange={e => {
+                      const fields = new FormData(e.currentTarget.form);
+                      const changed = [...fields].some(([name, value]) => name !== 'password' && value.trim() !== user[name]);
+                      setMode(changed ? action : '');
+                      setError('');
+                      setMsg('');
+                    }} />
+                </label>
+              ))}
+              {mode === action && <>
+                {action === 'email' && <Field name="password" type="password"
+                  autoComplete="current-password" label={t('Current password', 'Obecne hasło')}
+                  minLength={10} maxLength={256} />}
+                <button disabled={busy} className="btn btn-primary">{t('Save', 'Zapisz')}</button>
+                <button disabled={busy} type="button" className="btn btn-ghost" onClick={e => {
+                  e.currentTarget.form.reset();
+                  setMode('');
+                  setError('');
+                }}>{t('Cancel', 'Anuluj')}</button>
+              </>}
+            </form>
+          ))}
+          {!mode && (
         <div className="profile-actions">
-          {['names', 'email', 'password', 'logout', 'delete'].map(
+          {['password', 'logout', 'delete'].map(
             (action) => (
               <button
                 key={action}
@@ -468,51 +503,25 @@ export function Profile() {
             ),
           )}
         </div>
+          )}
+        </div>
       ) : (
         <form
           key={mode}
+          hidden={Boolean(pending)}
           className="account-form"
           onSubmit={(e) => {
             e.preventDefault();
             const fields = Object.fromEntries(new FormData(e.currentTarget));
-            let question;
-            if (mode === 'names') {
-              const name = [fields.first_name.trim(), fields.last_name.trim()].join(' ');
-              question = t(`Save your name as ${name}?`, `Zapisać imię i nazwisko jako ${name}?`);
-            } else if (mode === 'email') {
-              question = t(`Send a verification code to ${fields.email}?`, `Wysłać kod na adres ${fields.email}?`);
-            } else if (mode === 'password') {
-              question = t('Change your password and sign out?', 'Zmienić hasło i wylogować się?');
-            } else if (mode === 'delete') {
-              question = t('Permanently delete your account and workspace?', 'Trwale usunąć konto i jego dane?');
+            if (mode === 'confirm') run(mode, fields);
+            else {
+              setError('');
+              setPending(fields);
             }
-            if (!question || window.confirm(question)) run(mode, fields);
           }}
         >
           {mode === 'confirm' && delivery && (
             <DeliveryNotice {...delivery} />
-          )}
-          {mode === 'names' &&
-            [
-              ['first_name', t('First name', 'Imię')],
-              ['last_name', t('Last name', 'Nazwisko')],
-            ].map(([key, label]) => (
-              <label key={key}>
-                {label}
-                <input
-                  name={key}
-                  required
-                  maxLength={100}
-                  defaultValue={user[key]}
-                />
-              </label>
-            ))}
-          {mode === 'email' && (
-            <Field
-              name="email"
-              label={t('New email', 'Nowy e-mail')}
-              type="email"
-            />
           )}
           {mode === 'confirm' && (
             <Field
@@ -570,6 +579,28 @@ export function Profile() {
             {t('Cancel', 'Anuluj')}
           </button>
         </form>
+      )}
+      {pending && (
+        <section className="profile-review" aria-labelledby="profile-review-title">
+          <h4 id="profile-review-title">{labels[mode]}</h4>
+          {mode === 'names' && <dl>
+            <dt>{t('Current name', 'Obecne imię i nazwisko')}</dt>
+            <dd>{user.first_name} {user.last_name}</dd>
+            <dt>{t('New name', 'Nowe imię i nazwisko')}</dt>
+            <dd>{pending.first_name.trim()} {pending.last_name.trim()}</dd>
+          </dl>}
+          {mode === 'email' && <p>{t('Send a verification code to', 'Wyślij kod weryfikacyjny na adres')} <strong>{pending.email}</strong>?</p>}
+          {mode === 'password' && <p>{t('After saving, sign in again with your new password.', 'Po zapisaniu zaloguj się ponownie nowym hasłem.')}</p>}
+          {mode === 'delete' && <p>{t('Your account and workspace data will be permanently deleted.', 'Twoje konto i jego dane zostaną trwale usunięte.')}</p>}
+          <button type="button" disabled={busy}
+            className={'btn ' + (mode === 'delete' ? 'btn-danger' : 'btn-primary')}
+            onClick={() => { setPending(null); run(mode, pending); }}>
+            {mode === 'email' ? t('Send code', 'Wyślij kod') : mode === 'delete' ? labels.delete : t('Confirm changes', 'Potwierdź zmiany')}
+          </button>
+          <button type="button" autoFocus className="btn btn-ghost" onClick={() => setPending(null)}>
+            {t('Back to editing', 'Wróć do edycji')}
+          </button>
+        </section>
       )}
       {msg && <p role="status">{msg}</p>}
       {error && <p role="alert">{error}</p>}

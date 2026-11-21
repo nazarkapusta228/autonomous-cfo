@@ -13,9 +13,9 @@ export async function exerciseAccount(page) {
     page.getByRole('button', { name, exact: true }).click();
   const field = (name, value) =>
     page.getByLabel(name, { exact: true }).fill(value);
-  async function confirmClick(name) {
-    page.once('dialog', dialog => dialog.accept());
+  async function confirmClick(name, confirmation) {
     await click(name);
+    await click(confirmation);
   }
   async function code(address, subject) {
     await page.getByLabel('Email code', { exact: true }).waitFor();
@@ -82,21 +82,20 @@ export async function exerciseAccount(page) {
   await login(email, password);
   await page.reload();
   await page.locator('.user-chip').click();
-  await click('Edit name');
   await field('First name', 'Ada');
-  page.once('dialog', dialog => dialog.dismiss());
   await click('Save');
+  await click('Back to editing');
   assert.equal(await page.getByLabel('First name', { exact: true }).inputValue(), 'Ada');
-  await confirmClick('Save');
+  await confirmClick('Save', 'Confirm changes');
   await page.locator('.user-chip').filter({ hasText: 'Ada Nowak' }).waitFor();
-  await click('Change email');
-  await field('New email', newEmail);
+  await field('Email', newEmail);
   await field('Current password', password);
-  await confirmClick('Save');
+  await confirmClick('Save', 'Send code');
   await field('Email code', await code(newEmail, 'Confirm your new email'));
   await field('Current password', password);
   await click('Confirm new email');
-  await page.getByText(newEmail, { exact: true }).waitFor();
+  await page.locator('input[name=email]').waitFor();
+  assert.equal(await page.getByLabel('Email', { exact: true }).inputValue(), newEmail);
   await click('Log out');
   await click('Forgot password?');
   await field('Email', newEmail);
@@ -116,7 +115,7 @@ export async function exerciseAccount(page) {
     await click('Cancel');
     await click('Delete my account');
     await field('Current password', updatedPassword);
-    await confirmClick('Delete my account');
+    await confirmClick('Delete my account', 'Delete my account');
     await page.getByRole('heading', { name: 'Sign in', exact: true }).waitFor();
     assert.equal(
       await page.evaluate(async () => (await fetch('/api/workspace')).status),

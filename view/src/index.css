@@ -207,6 +207,10 @@ button { font-family: inherit; cursor: pointer; border: none; }
 .amount-pos { color: var(--success); font-weight: 600; }
 .amount-neg { color: var(--danger); font-weight: 600; }
 
+.transaction-category { display: inline-block; padding: .2rem 0; background: transparent; color: var(--text); font: inherit; font-weight: 650; text-align: start; border: 0; }
+button.transaction-category { cursor: pointer; color: var(--primary); text-decoration: underline dotted; text-underline-offset: .23em; }
+button.transaction-category:hover { text-decoration-style: solid; }
+
 /* Badges */
 .badge {
   display: inline-block;
@@ -464,6 +468,11 @@ summary { cursor: pointer; color: var(--accent); }
 .auth-card header, .auth-card nav { display: flex; align-items: center; flex-wrap: wrap; gap: .6rem; }
 .auth-card header { justify-content: space-between; color: var(--primary); }
 .profile-actions, .account-form, .account-form label { display: grid; gap: .65rem; }
+.account-form[hidden] { display: none; }
+.profile-review { display: grid; gap: .65rem; padding: 1rem; border: 1px solid var(--border); border-radius: var(--radius); background: var(--bg-elev); overflow-wrap: anywhere; }
+.profile-review h4, .profile-review dl, .profile-review dd, .profile-review p { margin: 0; }
+.profile-review dt { color: var(--text-muted); font-size: .85rem; }
+.profile-review dd { margin-bottom: .55rem; font-weight: 600; }
 .account-form label { font-size: .9rem; gap: .3rem; }
 .account-form input { width: 100%; min-width: 0; padding: .65rem; background: var(--bg-elev); border: 1px solid var(--border); border-radius: 8px; color: var(--text); font: inherit; }
 .name-fields { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: .6rem; }

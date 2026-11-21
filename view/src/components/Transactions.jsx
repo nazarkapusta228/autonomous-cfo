@@ -211,16 +211,14 @@ export default function Transactions() {
                 <tr>
                   <td className="date-cell">{t.value_on}</td>
                   <td>
-                    <button
-                      disabled={t.booked_on > state.settings.as_of || t.value_on > state.settings.as_of}
-                      className="btn btn-ghost"
-                      onClick={() => {
-                        setNotice('');
-                        setEditing(t);
-                      }}
-                    >
-                      {tr(t.category)}
-                    </button>
+                    {t.booked_on > state.settings.as_of || t.value_on > state.settings.as_of ? (
+                      <span className="transaction-category">{tr(t.category)}</span>
+                    ) : (
+                      <button type="button" className="transaction-category"
+                        onClick={() => { setNotice(''); setEditing(t); }}>
+                        {tr(t.category)}
+                      </button>
+                    )}
                   </td>
                   <td>{t.reference}</td>
                   <td>{t.counterparty}</td>
