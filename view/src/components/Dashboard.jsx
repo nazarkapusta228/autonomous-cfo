@@ -1,6 +1,7 @@
 import { usePreferences } from '../context/Preferences';
 import React from 'react';
 import { useApp } from '../context/AppContext';
+import {CashOverview, SpendingTrends} from "./CashOverview";
 import AuditTrail from './AuditTrail';
 import BalanceChart from './BalanceChart';
 
@@ -9,12 +10,6 @@ export default function Dashboard() {
   const { state } = useApp();
   const fc = state.analysis.forecast;
   const metrics = [
-    [
-      tr("Balance on") + ' ' + fc.as_of,
-      eur(fc.opening_balance),
-      tr("Starting cash plus booked movements through the cut-off."),
-      Number(fc.opening_balance) < 0,
-    ],
     [
       tr("Lowest balance ·") + ' ' + state.settings.horizon_days + ' ' + tr("days"),
       eur(fc.minimum_balance),
@@ -36,7 +31,8 @@ export default function Dashboard() {
   ];
   return (
     <>
-      <div className="kpi-grid">
+      <CashOverview/>
+      <div className="kpi-grid dashboard-kpis">
         {metrics.map(([k, v, hint, attention]) => (
           <div className={k === tr("Funding needed") ? 'kpi funding-needed' : 'kpi'} key={k}>
             <div className="kpi-label">{k}</div>
@@ -54,6 +50,7 @@ export default function Dashboard() {
           reserve={fc.reserve}
         />
       </section>
+      <SpendingTrends/>
       {(() => {
         const closingCents = Math.round(Number(fc.opening_balance) * 100);
         const movementCents = state.transactions

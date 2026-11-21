@@ -14,7 +14,7 @@ import {
 } from 'recharts';
 
 
-export default function BalanceChart({ points, action, reserve, neutral = false }) {
+export default function BalanceChart({ points, action, actionLabel, reserve, neutral = false }) {
   const { t: tr, money: eur } = usePreferences();
   const gradient = useId().replace(/:/g, '');
   const data = points.map((p, i) => ({
@@ -42,7 +42,7 @@ export default function BalanceChart({ points, action, reserve, neutral = false 
           <i className="key-balance" /> {tr("Balance")} </span>
         {action && (
           <span>
-            <i className="key-action" /> {tr("With action")} </span>
+            <i className="key-action" /> {actionLabel || tr("With action")} </span>
         )}
         {reserve != null && (
           <span>
@@ -113,7 +113,7 @@ export default function BalanceChart({ points, action, reserve, neutral = false 
             />
             {action && (
               <Line
-                dataKey="With action" name={tr("With action")}
+                dataKey="With action" name={actionLabel || tr("With action")}
                 stroke="var(--accent)"
                 strokeWidth={3}
                 strokeDasharray="9 3"

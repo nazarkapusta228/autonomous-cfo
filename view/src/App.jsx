@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { AppProvider } from './context/AppContext';
+import Simulations from './components/Simulations';
 import Data from './components/Data';
 import Sidebar from './components/Sidebar';
 import Header from './components/Header';
@@ -16,6 +17,7 @@ import { Preferences } from './context/Preferences';
 import { StatementPeriod, PeriodPicker } from './context/StatementPeriod';
 
 const PAGES = {
+  scenarios: {title:'Simulations',subtitle:'Compare cash flow scenarios',component:Simulations},
   data: {title:'Data', subtitle:'Imports and exports', component:Data},
   settings: {title:'Settings', subtitle:'Workspace preferences', component:Settings},
   dashboard: {

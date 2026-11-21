@@ -27,7 +27,7 @@ const datasets = [
 ];
 
 function Dataset({ kind, title, description }) {
-  const { state, busy, submit, setError } = useApp();
+  const { state, busy, submit, setError, confirm } = useApp();
   const { t } = usePreferences();
   const [upload, setUpload] = useState(null);
   const [format, setFormat] = useState('csv');
@@ -133,7 +133,7 @@ function Dataset({ kind, title, description }) {
               disabled={busy}
               onClick={async () => {
                 if (
-                  window.confirm(
+                  await confirm(
                     t(
                       'Delete this dataset and recalculate the workspace?',
                       'Usunąć te dane i przeliczyć prognozę?',
@@ -157,6 +157,7 @@ function Dataset({ kind, title, description }) {
             {t('Review columns', 'Sprawdź kolumny')} · {upload.count}{' '}
             {t('rows', 'wierszy')}
           </h4>
+          <details key={upload.filename} open={!ready || undefined}><summary>{t("Column matching", "Dopasowanie kolumn")} · {Object.values(upload.mapping).filter(Boolean).length}</summary>
           <p>
             {upload.model_used
               ? t(
@@ -222,6 +223,7 @@ function Dataset({ kind, title, description }) {
               </label>
             ))}
           </div>
+          </details>
           {stale && (
             <p role="alert">
               {t(

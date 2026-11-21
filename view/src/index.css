@@ -512,3 +512,30 @@ summary { cursor: pointer; color: var(--accent); }
 .data-tools .btn { align-items: center; justify-content: center; text-decoration: none; }
 .data-original { color: var(--primary); overflow-wrap: anywhere; }
 .data-map input { min-width: 0; padding: .5rem; border-radius: 8px; border: 1px solid var(--border); font: inherit; color: var(--text); background: var(--bg-elev); }
+
+select:not([multiple]):not([size]) {
+  appearance: none;
+  padding-inline-end: 2.35rem !important;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='8' viewBox='0 0 14 8'%3E%3Cpath d='m1 1 6 5.5L13 1' fill='none' stroke='%23859589' stroke-width='1.6'/%3E%3C/svg%3E") !important;
+  background-position: right .8rem center !important;
+  background-repeat: no-repeat !important;
+}
+.message-dialog { margin: auto; width: min(28rem,calc(100vw - 2rem)); color:var(--text); background:var(--bg-card); border:1px solid var(--border); border-radius:12px; padding:1.5rem; }
+.message-dialog::backdrop { background:rgb(0 0 0 / 65%); }
+.message-dialog p,.data-preview details { margin:.85rem 0; }
+.data-preview summary { cursor:pointer; }
+.cash-overview { display:grid; grid-template-columns:minmax(13rem,1fr) repeat(2,minmax(8rem,12rem)); gap:1rem; align-items:center; }
+.cash-ring { display:grid; justify-items:center; text-align:center; gap:.35rem; }
+.cash-ring svg { width:4.6rem; height:4.6rem; }
+.cash-ring text { fill:var(--text); font-size:16px; font-weight:650; }
+.ring-track,.ring-value { fill:none; stroke-width:5; }
+.ring-track { stroke:var(--border); }
+.ring-value { stroke:currentColor; animation:fill-ring .85s ease-out; }
+@keyframes fill-ring { from {stroke-dashoffset:100;} }
+@media(prefers-reduced-motion:reduce){.ring-value{animation:none}}
+.cash-ring small,.projection-result { color:var(--text-muted); }
+.trend-scroll { max-width:100%; overflow:auto; }
+.trend-scroll td { white-space:nowrap; font-variant-numeric:tabular-nums; }
+.projection-result { margin:1rem 0; }
+.dashboard-kpis { grid-template-columns:repeat(3,minmax(0,1fr)); }
+@media(max-width:760px){ .cash-overview{grid-template-columns:repeat(2,minmax(0,1fr));}.cash-overview > :first-child{grid-column:1/-1}.dashboard-kpis{grid-template-columns:1fr} }

@@ -216,6 +216,7 @@ class EditPayment(Change):
     column: str
     value: str = Field(max_length=4000)
     same_type: bool = False
+    same_category: bool = False
 
 
 @app.post("/api/data/{kind}/preview")
@@ -306,34 +307,38 @@ def remove_file(request: Request, kind: files.Kind, body: Change):
 def edit_payment(request: Request, body: EditPayment):
     with current(request, body.revision) as (conn, dsn, row):
         headers, records = files.active_table("statement", row["statement"])
+        if body.source_row > len(records) + 1 or (body.same_type and body.same_category):
+            raise ValueError("Select a payment and one edit scope")
+        targets = {body.source_row}
+        if body.same_type:
+            kind = records[body.source_row - 2]["Transaction Type"]
+            targets = {
+                i for i, record in enumerate(records, 2) if record["Transaction Type"] == kind
+            }
+        elif body.same_category:
+            for group in ws.ledger(dsn, row, full_statement=True).values():
+                members = {payment.source_row for payment in group.transactions}
+                if body.source_row in members:
+                    targets = members
+                    break
         if body.column == "category":
             category = body.value.strip()
-            if not category or len(category) > 100 or body.source_row > len(records) + 1:
+            if not category or len(category) > 100:
                 raise ValueError("Select a payment and enter a category of up to 100 characters")
-            kind = records[body.source_row - 2]["Transaction Type"]
             conn.execute(
                 "INSERT INTO category_overrides (import_id,source_row,category) "
                 "SELECT import_id,source_row,%s FROM transactions WHERE import_id=%s "
-                "AND (source_row=%s OR (%s AND kind=%s)) "
+                "AND source_row=ANY(%s) "
                 "ON CONFLICT(import_id,source_row) DO UPDATE SET category=excluded.category",
-                (category, row["import_id"], body.source_row, body.same_type, kind),
+                (category, row["import_id"], list(targets)),
             )
             ws.advance(conn, row)
             return {"saved": True}
-        if (
-            body.column not in headers
-            or body.column == "Info"
-            or body.source_row > len(records) + 1
-        ):
+        if body.column not in headers or body.column == "Info":
             raise ValueError("Select a valid payment and editable column")
-        selected = records[body.source_row - 2]
-        selected_type = selected["Transaction Type"]
         value = files.convert(body.column, body.value, "statement")
-        for record in records:
-            if record is selected or (
-                body.same_type and record["Transaction Type"] == selected_type
-            ):
-                record[body.column] = value
+        for number in targets:
+            records[number - 2][body.column] = value
         replace_data(conn, dsn, row, "statement", files.encode(headers, records, ";"), edit=True)
     return {"saved": True}
 

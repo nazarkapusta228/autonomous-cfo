@@ -2,7 +2,6 @@ import { usePreferences } from '../context/Preferences';
 import { usePeriod } from '../context/StatementPeriod';
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
-import SimulationForm from './SimulationForm';
 
 export default function TaxAgent() {
   const { t: tr, money: eur } = usePreferences();
@@ -103,14 +102,6 @@ export default function TaxAgent() {
           <p>{tr("No payments categorized as Taxes.")}</p>
         )}
       </section>
-      <SimulationForm
-        key={state.revision}
-        suggested={next ? String(-Number(next.amount_eur)) : ''}
-        suggestedDate={next?.date}
-        kind="tax_prepayment"
-        title={tr("Adjusted tax prepayment")}
-        description={tr("Use an amount from a tax notice or your accountant. Approving records a simulated filing in this workspace.")}
-      />
     </>
   );
 }

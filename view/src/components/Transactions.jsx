@@ -134,23 +134,24 @@ const paymentFields = [
 
 function EditPayment({transaction, close}) {
   const {t} = usePreferences();
-  const {state, submit, busy} = useApp();
+  const {state, submit, busy, confirm} = useApp();
   const [column, setColumn] = useState('Amount');
   const [value, setValue] = useState(transaction.amount);
-  const [all, setAll] = useState(false);
+  const [scope, setScope] = useState('row');
   const count = state.statement_rows.filter(r=>r.kind === transaction.kind).length;
   return <form className="data-tools" onSubmit={async e=>{
     e.preventDefault();
-    if (all && !window.confirm(t('Apply this value to all matching payments?', 'Zastosować tę wartość do wszystkich pasujących płatności?'))) return;
-    if(await submit('payments/edit', {source_row:transaction.source_row, column, value, same_type:all})) close();
+    if (scope !== 'row' && !await confirm(t('Apply this value to all matching payments?', 'Zastosować tę wartość do wszystkich pasujących płatności?'))) return;
+    if(await submit('payments/edit', {source_row:transaction.source_row, column, value, same_type:scope==='type', same_category:scope==='category'})) close();
   }}>
     <label>{t('Column','Kolumna')}<select value={column} onChange={e=>{
       const f = paymentFields.find(f=>f[0] === e.target.value);
       setColumn(f[0]); setValue(transaction[f[1]]);
     }}>{paymentFields.map(([name,,en,pl])=><option key={name} value={name}>{t(en,pl)}</option>)}</select></label>
     <label>{t('New value','Nowa wartość')}<input type={column.endsWith('Date')?'date':'text'} value={value} onChange={e=>setValue(e.target.value)} /></label>
-    <label>{t('Apply to','Zastosuj do')}<select value={all?'type':'row'} onChange={e=>setAll(e.target.value==='type')}>
+    <label>{t('Apply to','Zastosuj do')}<select value={scope} onChange={e=>setScope(e.target.value)}>
       <option value="row">{t('This row','Ten wiersz')} #{transaction.source_row}</option>
+      <option value="category">{t("Category")} · {t(transaction.category)} ({state.statement_rows.filter(r=>r.category===transaction.category).length})</option>
       <option value="type">{transaction.kind} ({count})</option>
     </select></label>
     <button className="btn btn-primary" disabled={busy}>{t('Save changes','Zapisz zmiany')}</button>

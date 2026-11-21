@@ -163,6 +163,17 @@ def test_data_files_edits_exports_and_deletion(postgres_url, monkeypatch):
     assert save(
         "payments/edit", source_row=2, column="category", value="Office rent", same_type=True
     ).is_success
+    assert save(
+        "payments/edit", source_row=2, column="Transaction Type", value="supplies"
+    ).is_success
+    assert save(
+        "payments/edit",
+        source_row=2,
+        column="Payment Reference",
+        value="Office expenses",
+        same_category=True,
+    ).is_success
+    assert {r["reference"] for r in state(owner)["statement_rows"]} == {"Office expenses"}
     updated = state(owner)
     assert {record["category"] for record in updated["statement_rows"]} == {"Office rent"}
     original = owner.get("/api/data/statement/original", params={"revision": updated["revision"]})

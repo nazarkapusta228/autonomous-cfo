@@ -1,5 +1,6 @@
 import { usePreferences } from '../context/Preferences';
 import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
+import MessageDialog from '../components/MessageDialog';
 import { api } from '../lib/api';
 
 const AppContext = createContext();
@@ -9,6 +10,8 @@ export function AppProvider({ children }) {
   const [state, setState] = useState(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  const [question,setQuestion] = useState(null);
+  const confirm = message => new Promise(resolve => setQuestion({message,resolve}));
   const active = useRef(false);
   const initial = useRef(null);
 
@@ -44,7 +47,7 @@ export function AppProvider({ children }) {
   }
 
   return (
-    <AppContext.Provider value={{ state, busy, submit, refresh, setError }}>
+    <AppContext.Provider value={{ state, busy, submit, refresh, setError, confirm }}>
       {state ? (
         children
       ) : (
@@ -52,12 +55,10 @@ export function AppProvider({ children }) {
           {error || tr("Loading workspace…")} {error && <button onClick={refresh}>{tr("Retry")}</button>}
         </div>
       )}
-      {state && error && (
-        <div role="alert" className="toast error">
-          {error}{' '}
-          <button className="btn btn-ghost" onClick={() => setError('')}> {tr("Dismiss")} </button>
-        </div>
-      )}
+      {question && <MessageDialog confirmation message={question.message} close={answer=>{
+        setQuestion(null); question.resolve(answer);
+      }}/>}
+      {state && error && <MessageDialog message={error} close={()=>setError('')}/>}
     </AppContext.Provider>
   );
 }

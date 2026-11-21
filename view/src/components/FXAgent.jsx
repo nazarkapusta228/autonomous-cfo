@@ -11,7 +11,6 @@ import {
   XAxis,
   YAxis,
 } from 'recharts';
-import SimulationForm from './SimulationForm';
 
 export default function FXAgent() {
   const { t: tr, money: eur, originalMoney } = usePreferences();
@@ -84,14 +83,6 @@ export default function FXAgent() {
           </>
         )}
       </section>
-      <SimulationForm
-        key={state.revision + currency}
-        currency={currency}
-        lastRate={fx.rates.at(-1)}
-        kind="fx_forward"
-        title={tr("CHF forward simulation").replace("CHF", currency)}
-        description={tr("Enter a future obligation and an assumed exchange rate.", "Podaj kwotę zobowiązania i zakładany kurs.")}
-      />
       <section className="card">
         <div className="card-title">{tr("Booked CHF payments").replace("CHF", currency)}</div>
         <p className="card-sub"> {tr("These are payments already posted in CHF through").replace("CHF", currency)} {period.end}{tr(". A minus sign means money left the account.")} </p>
