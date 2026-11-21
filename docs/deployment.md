@@ -1,17 +1,12 @@
-# Запуск Autonomous CFO в OpenShift AI
+# OpenShift deployment
 
-Застосунок працює в проєкті `autonomous-cfo`. OpenShift Route веде на FastAPI, який віддає
-React і обробляє запити обох агентів. PostgreSQL 16 використовує PVC. Модель
-Qwen2.5-7B-Instruct працює в KServe через vLLM на одному NVIDIA L4. Лише вебзастосунок
-потребує зовнішнього Route.
+The `autonomous-cfo` project runs FastAPI and the React dashboard, PostgreSQL 16 with persistent storage, and Qwen2.5-7B-Instruct served by vLLM through KServe. The application has a public HTTPS route. Both agents call the model inside the cluster at `http://cfo-qwen-predictor:8080/v1`.
 
-## Відкрити наявне демо
+## Open the application
 
-[Відкрити Autonomous CFO](https://autonomous-cfo-autonomous-cfo.apps.ocp.dtnkb.sandbox1202.opentlc.com/)
+[Open Autonomous CFO](https://autonomous-cfo-autonomous-cfo.apps.ocp.dtnkb.sandbox1202.opentlc.com/). In the OpenShift console, the same address appears under **Networking → Routes → autonomous-cfo → Location**.
 
-У вебконсолі OpenShift оберіть проєкт **autonomous-cfo → Networking → Routes → autonomous-cfo**
-і відкрийте **Location**. Адресу також можна отримати через CLI після входу командою,
-яку видає вебконсоль через **Copy login command**.
+Sign in with the OpenShift CLI to inspect the deployment. The web console provides a **Copy login command** option.
 
 ```sh
 oc project autonomous-cfo
@@ -20,30 +15,27 @@ oc get isvc cfo-qwen
 oc get deployments,pvc
 ```
 
-Для перевірки відкрийте Liquidity Agent, запустіть агента й погодьте симуляцію.
-Після оновлення сторінки стан і номер заявки відновлюються з PostgreSQL. Щоб показати
-інвестиційний сценарій, у Liquidity Agent задайте початковий залишок 25000, натисніть
-Run forecast і потім Run investment agent у вкладці Investment.
+The application's `/api/health` endpoint reports the status of the application, database and model. The OpenShift AI dashboard shows the model under **Projects → autonomous-cfo → Deployments**.
 
-## Зібрати й розгорнути поточний коміт
+## Deploy an existing project
 
-З кореня Git-репозиторію після входу в OpenShift виконайте:
+Run the deployment script from the repository root with the desired commit checked out.
 
 ```sh
-oc project autonomous-cfo
 sh scripts/deploy_web.sh
 ```
 
-Скрипт застосує SQL, створить BuildConfig, передасть архів відстежуваних файлів із HEAD,
-дочекається збірки та розгорне її образ за digest. Потім перевірить rollout і виведе URL.
-Локальні .env, node_modules і реквізити кластера до архіву не входять.
-У випадку помилки перегляньте `oc logs -f bc/autonomous-cfo`,
-`oc logs deployment/autonomous-cfo` або `oc describe isvc cfo-qwen`.
+The script applies the SQL migrations, builds the application from committed files at `HEAD`, deploys the resulting image by digest and prints the route after rollout. To diagnose a failure, inspect the relevant component.
 
-## Відтворити інфраструктуру в новому проєкті
+```sh
+oc -n autonomous-cfo logs -f bc/autonomous-cfo
+oc -n autonomous-cfo logs deployment/autonomous-cfo
+oc -n autonomous-cfo describe isvc cfo-qwen
+```
 
-Потрібні налаштовані OpenShift AI, KServe, доступний NVIDIA GPU, внутрішній registry
-та доступ до образів моделі й runtime. Для ідентичної конфігурації використайте:
+## Set up a new installation
+
+The manifests use the project name `autonomous-cfo`. They require OpenShift AI with KServe, an available NVIDIA GPU, an internal image registry and access to the model and runtime images. The settings script uses `kubectl` with the same cluster context as `oc`.
 
 ```sh
 oc apply -f deploy/openshift/project.yaml
@@ -55,21 +47,27 @@ oc rollout status deployment/cfo-postgres
 sh scripts/deploy_web.sh
 ```
 
-Скрипт налаштувань використовує kubectl з поточним kubeconfig. Створюйте Secret один
-раз для нового PVC. Адреса моделі всередині цього проєкту —
-`http://cfo-qwen-predictor:8080/v1`. Обидва агенти використовують served model
-`Qwen/Qwen2.5-7B-Instruct`. Стан GPU-сервісу доступний також у панелі OpenShift AI.
+Create the settings secret once for a new database. An existing persistent volume requires its original database credentials.
 
-## Спільний GPU
+## Account email
 
-Для запуску Qwen демосервіс `my-first-model/llama-32-3b-instruct` призупинено через
-анотацію KServe. Обидві моделі зберігають свої конфігурації. Якщо команда пізніше
-вирішить повернути GPU демомоделі:
+Sign-up, email changes and password resets require SMTP delivery. For a verified Brevo sender, run the following command after deploying the application.
 
 ```sh
-oc -n autonomous-cfo annotate isvc cfo-qwen serving.kserve.io/stop=true --overwrite
-oc -n my-first-model annotate isvc llama-32-3b-instruct serving.kserve.io/stop=false --overwrite
+python scripts/configure_mail.py brevo
 ```
 
-Кластер одночасно обслуговує одну з цих моделей. [Картка Qwen](https://huggingface.co/Qwen/Qwen2.5-7B-Instruct),
-[Red Hat OpenShift AI Model Serving](https://docs.redhat.com/en/documentation/red_hat_openshift_ai_self-managed/3.5/html/deploying_models/index).
+The script prompts for the sender, SMTP login and key, stores the settings in the `cfo-mail-delivery` secret, restarts the application and checks SMTP authentication. The `gmail` option uses the configured Gmail sender and prompts for its Google app password.
+
+For other relays, configure `SMTP_HOST`, `SMTP_PORT`, `SMTP_TLS` (`starttls` or `implicit`), `SMTP_FROM`, `SMTP_USERNAME` and `SMTP_PASSWORD` in the same secret. Set `SMTP_PREVIEW_INBOX_URL` to an empty value for public delivery. Restart the application after changing the secret. For local development, set the corresponding values in `.env`.
+
+## Private email preview
+
+Mailpit captures messages in a private inbox for local and browser tests. For a local app using the example environment settings, run the following commands and keep the port forward open.
+
+```sh
+oc -n autonomous-cfo apply -f deploy/openshift/mail-preview.yaml
+oc -n autonomous-cfo port-forward deployment/cfo-mail-preview 1025:1025 8025:8025
+```
+
+Read verification codes in the [local inbox](http://localhost:8025). Messages captured by Mailpit stay in this inbox. For delivery to personal email accounts, configure a relay as described above.

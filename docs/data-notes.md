@@ -1,47 +1,35 @@
-# Перевірка вхідних матеріалів
+# Data formats and forecast assumptions
 
-Прочитано Challenge Card, технічну презентацію Red Hat, OpenShift AI Survival Guide,
-форму Project Card, SampleData PDF/DOCX; перевірено CSV і графік ліквідності.
-Project Card залишено незаповненою: назва команди, репозиторій для подання і фінальні
-результати ще не визначені. Survival Guide посилається на OpenShift AI 3.5;
-версію фактичного середовища потрібно перевірити після отримання доступу.
+## Choosing a dataset
 
-## Виписка
+| Dataset | Contents | Use |
+| --- | --- | --- |
+| Bank statement | Booked amounts, dates, currencies and payment references | Reconstructs the balance and provides the transaction history. |
+| Cash flow plan | Expected payments and income with dates and signed EUR amounts | Replaces the default projection of recurring transactions. |
+| Invoices | Invoice IDs, counterparties, issue dates, due dates and signed EUR amounts | Matches invoices to bookings and identifies outstanding payments and receipts. |
 
-Оригінал: `redhat/red-hat-challenge-samle data/pizzeria-amalfi-bank-statement-2025-v6.csv`.
-Копія без змін: `data/sample/pizzeria-amalfi-2025.csv`.
-Це синтетичні дані організаторів за 2025 рік: 1125 рядків, розділювач `;`,
-десяткова кома, дати DD.MM.YY, зворотне хронологічне сортування.
-Дванадцять CHF-операцій потребують конвертації за курсом EUR/CHF у reference.
-Цей парсинг курсу специфічний для прикладу, не універсальний банківський стандарт.
-Невідома валюта або відсутній курс зупиняють імпорт, а не пропускаються мовчки.
+Import files in **Data**. The web importer accepts CSV, tabular TXT and JSON arrays of objects. For invoices, the standard fields are `invoice_id`, `counterparty`, `issued_on`, `due_on` and `amount_eur`. Positive amounts are receipts; negative amounts are payments. Include the invoice ID in a plan row for the same invoice so the forecast can recognize it. A row without an ID is a separate assumption.
 
-Початкового залишку немає. При нульовому початковому залишку:
+The statement importer identifies an exact file by its SHA-256 hash and preserves separate rows with identical values. Overlapping statements are separate imports. Use one statement covering the period you want to analyze.
 
-| Контрольна точка | EUR |
-| --- | ---: |
-| 30 червня | -22 598,69 |
-| Мінімум 3 липня | -24 597,60 |
-| 31 грудня | 30 766,35 |
+## Sample statement
 
-Додавання початкових EUR 2500 точно відтворює заявлені значення:
--20 098,69; -22 097,60; 33 266,35 відповідно. EUR 2500 — виведене припущення,
-не поле виписки. Основний React UI використовує припущення EUR 2500; його можна змінити в Liquidity Agent.
+The [Pizzeria Amalfi statement](../data/sample/pizzeria-amalfi-2025.csv) contains 1,125 transactions for 2025, in reverse date order. It uses semicolons, decimal commas and dates in DD.MM.YY format. Twelve CHF transactions include the EUR conversion rate in the payment reference. Imports with an unsupported currency or missing required exchange rate return an error.
 
-Опис говорить про три тижні закриття в червні. Точні майбутні дати потрібно
-задавати сценарієм, а не підглядати в майбутні операції CSV.
-Розрахунки історії використовують value date і заповнюють дні без операцій.
+The statement contains no opening balance. The sample workspace assumes EUR 2,500 before the first booking. You can change this in **Liquidity Agent**. The table shows how this assumption affects the historical closing balance.
 
-## Базовий прогноз
+| Date | Starting at EUR 0 | Starting at EUR 2,500 |
+| --- | ---: | ---: |
+| 30 June 2025 | −22,598.69 | −20,098.69 |
+| 3 July 2025 (lowest balance) | −24,597.60 | −22,097.60 |
+| 31 December 2025 | 30,766.35 | 33,266.35 |
 
-Застосунок читає повну банківську виписку. Для базового прогнозу він бере платежі,
-відомі на дату зрізу, із датою валютування протягом останніх 28 днів та повторює
-їх кожні чотири тижні до кінця горизонту. Це оцінка за історією. Разові витрати,
-закриття закладу та сезонні зміни потребують окремого плану користувача.
-Імпорт явного плану замінює базову оцінку. Розрахунок також враховує відкриті фактури.
+## Reading a forecast
 
-## Зберігання виписок
+Only transactions booked and valued by the cut-off date enter the historical balance. The baseline repeats cash flows from the last 28 days every four weeks. An uploaded plan replaces this pattern. Include known closures, one-off spending and seasonal changes in that plan. A day without a planned or projected flow carries the previous balance forward.
 
-Дедуплікація в БД працює за SHA-256 усього файлу. Перекривні експорти з різним
-вмістом поки не об'єднуються: обирайте один import_id, не сумуйте всі імпорти.
-Справжні однакові рядки в одному файлі зберігаються окремо за source_row.
+Invoice matching uses confirmed bookings to estimate how late customers pay. Overdue receivables without a supported future payment date are shown separately. Daily balances do not establish the order of payments within a day.
+
+**Funding needed** is the gap between the reserve and the lowest projected balance, including the opening balance. When the balance stays at or above the reserve, the shortfall is zero.
+
+Dashed lines show an estimated 90% prediction interval when sufficient recent history is available. The calculation compares each day's net cash flow with the flow 28 days earlier. The interval widens with the forecast horizon and depends on future variation resembling the observed history.

@@ -1,70 +1,33 @@
-# Запуск та інтеграція агентів
+# Command-line and API reference
 
-[Кластер команди, запуск Job і підключення з PyCharm](deployment.md).
+Run the CLI from the repository root after completing the [local setup](../README.md#local-setup). The default input is the bundled bank statement, with a cut-off date of 31 May 2025, an opening balance of EUR 2,500, a zero reserve and a 45-day forecast.
 
-Команди запускають з кореня репозиторію після встановлення пакета у venv.
-Для демо використано прогноз колеги з коміту a77611b. Дата зрізу — 31.05.2025,
-початкове припущення — 2500 EUR, горизонт — 45 днів. Історичні операції
-обмежені і датою проведення, і датою валютування.
+## Forecast and agent commands
 
 ```sh
 python -m cfo.cli forecast
 python -m cfo.cli run liquidity
 python -m cfo.cli run investment
-python -m cfo.cli show 1
-python -m cfo.cli preview 1 --settles-on 2025-07-15 --interest-eur 100.00
-python -m cfo.cli approve 1 --actor demo-owner
 ```
 
-Замініть 1 фактичним ID. Для відмови використайте `reject` замість `approve`.
-Прогноз можна отримати офлайн. `run` використовує Qwen та PostgreSQL. Для
-повторного запиту передайте виданий UUID через `--request-id`. Задавайте новий UUID
-для іншого агента або змінених вхідних даних. У UI зберігайте ID запису для
-перегляду та приймайте actor із сесії власника. CLI використовує передане ім’я
-для журналу симуляції. Для preview вкажіть власні припущення про дату погашення/повернення
-депозиту та загальну суму відсотків. Команда повертає базову та альтернативну криві окремо від стану заявки.
+`forecast` calculates a forecast locally. Both `run` commands require PostgreSQL and a reachable Qwen endpoint. Pass `--statement`, `--plan` or `--invoices` to use your own input files. Set `--as-of`, `--opening`, `--reserve` and `--days` to change the assumptions. The horizon can range from 1 to 366 days.
 
-Для PostgreSQL потрібні всі міграції з `sql/` у порядку номерів.
-Новий volume у Compose запускає їх автоматично. Для вже створеного локального
-volume застосуйте SQL до наявної БД:
+An agent run prints a request UUID and returns a saved decision. To retry the same assessment, pass its UUID with `--request-id`. Use a new UUID when the inputs or the agent change.
+
+## Inspect or review a decision
+
+Replace `1` with the saved decision ID. The preview compares the original forecast with a scenario using the specified settlement date and total interest in EUR.
 
 ```sh
-for f in sql/*.sql; do docker compose exec -T db psql -v ON_ERROR_STOP=1 -U cfo -d cfo < "$f" || break; done
+python -m cfo.cli show 1
+python -m cfo.cli preview 1 --settles-on 2025-07-15 --interest-eur 100.00
+python -m cfo.cli approve 1 --actor owner
 ```
 
-Послідовність викликів для UI:
+Use `reject` in place of `approve` to decline a proposal. The actor is recorded in the audit history. Approval creates a simulated request for the proposed financial action.
 
-1. `db.import_statement(dsn, statement_bytes)` повертає import_id для звірки.
-   `ledger.categorize` повертає по кожній категорії суму EUR та список її операцій.
-   `save_category` зберігає виправлення окремого рядка, а з `apply_after` також
-   створює правило для наступних платежів цього виду на цьому рахунку.
-2. `analysis.prepare_analysis(statement_bytes, plan_bytes, as_of=..., starting_balance=...)`
-   повертає прогноз, платежі під ризиком, план та звірку. Параметри `reserve` і
-   `horizon_days` задають резерв і тривалість, зокрема 30, 45, 60 або 90 днів.
-   Для довшого горизонту заповніть план на весь період: порожній день означає
-   припущення про нульовий потік. Перші платежі під ризиком можуть мати одну
-   дату, бо виписка та план не задають черговості всередині дня.
-3. Для рахунків передайте CSV у `invoices` та збережені рішення з
-   `ledger.load_invoice_decisions` у `confirmed`. Неоднозначні збіги з
-   `analysis.reconciliation.ambiguous` власник вирішує через
-   `ledger.save_invoice_decision`. Після цього викличте підготовку знову.
-4. `service.assess(settings, analysis, "liquidity", request_id=uuid)` або
-   `"investment"` повертає збережений результат. Сума, дата і межа строку в EUR-сценарії
-   визначаються кодом. Qwen обирає причини, наступний крок та ризики серед фактів
-   сценарію. У разі помилки моделі UI отримує `ModelError.code` та `retryable`.
-5. `workflow.decide(dsn, id, "approve", actor=...)` або `"reject"` атомарно
-   записує рішення й аудит. `workflow.get_recommendation(dsn, id)` повертає
-   стан після перезавантаження. Погодження фінансової пропозиції створює
-   симульовану заявку. Це не проводка коштів на рахунок підприємства.
+## Web API
 
-CSV рахунків має заголовок
-`invoice_id;counterparty;issued_on;due_on;amount_eur`. Сума зі знаком плюс
-для надходження, мінус для платежу. Якщо той самий рахунок уже є в CSV плану,
-вкажіть його `invoice_id` у додатковій колонці плану. Рядки без ID є окремими
-припущеннями. Код не може розкласти агреговану статтю «постачальники» на
-конкретні рахунки без їх ідентифікаторів. Статистика прострочень обчислюється
-за підтвердженими надходженнями до зрізу. Для прострочених надходжень без
-обґрунтованої майбутньої дати доступна окрема група unprojected_receivables.
+FastAPI publishes the [interactive API reference](http://127.0.0.1:8080/docs) and the OpenAPI schema at `/openapi.json`. Workspace requests use the signed-in account. The web interface reads the saved decision when the page reloads.
 
-Інтеграційні тести використовують `TEST_DATABASE_URL` та створюють тимчасову
-схему. CI використовує PostgreSQL 16. Вебконтракт FastAPI доступний через /docs.
+[Forecast inputs](data-notes.md) · [Agent architecture](architecture.md)

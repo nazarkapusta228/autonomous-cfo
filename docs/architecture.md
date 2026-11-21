@@ -1,27 +1,24 @@
-# Архітектура агентів
+# Agents, decisions and storage
 
-`prepare_analysis` приймає виписку, датований план, дату зрізу, початковий залишок
-і резерв. Опційний список рахунків додає звірку з банком та оцінку затримок.
-Обидва агенти та графік читають один `LiquidityForecast`. Суми зберігають точність
-у Decimal та PostgreSQL NUMERIC.
+FastAPI serves the React dashboard and runs both Python agents. PostgreSQL stores accounts, workspace data, decisions and audit history. Both agents use the same Qwen2.5-7B-Instruct endpoint on OpenShift AI.
 
-У liquidity-сценарії код визначає розмір кредитної лінії та дату першого
-порушення резерву. Investment оцінює частку поточного залишку для операційних
-потреб, резерв та вільну частку на всьому горизонті. При надлишку він пропонує
-запит умов строкового депозиту в межах прогнозу. Умови банку потребують окремого
-підтвердження. `scenarios.compare_scenarios` приймає явні припущення про
-погашення/повернення депозиту та суму відсотків, щоб порівняти криві залишку.
+## From a statement to a forecast
 
-Обидва модулі викликають Qwen через один HTTPX-клієнт і JSON Schema для конкретного
-аналізу. Qwen ранжує релевантні датовані факти й обирає крок та ризики.
-Власник бачить текст із перевіреними сумами та датами. Дані контрагентів та
-ідентифікатори рахунків для пояснення підставляються локально. Некоректна
-відповідь повертає безпечну для показу помилку.
+The application categorizes booked transactions and reconciles invoices against the bank statement. The account owner can resolve ambiguous matches. The forecast combines the balance at the cut-off date with future cash flows, outstanding invoices and saved edits to planned payments. The dashboard and both agents read the same forecast. Monetary calculations use Python Decimal and PostgreSQL NUMERIC.
 
-`assess` зберігає незмінний прогноз, валідовану рекомендацію, контекст, роль агента
-та ключ повторного запиту. `decide` блокує рядок у PostgreSQL на час рішення.
-Погодження фінансової дії, запис симульованої заявки та події аудиту фіксуються
-однією транзакцією. Відмова зберігається окремо. Рішення hold закінчує сценарій
-зі статусом no_action. Симуляція заявки не створює грошової проводки.
+## What the agents decide
 
-[API та CLI](agent-backend.md) · [Розгортання](deployment.md)
+| Agent | Question | Result |
+| --- | --- | --- |
+| Liquidity | When will cash fall below the reserve, and by how much? | A proposed funding amount and date when cash is needed, or a decision to hold. |
+| Investment | How much cash can be set aside without breaching the reserve? | A proposed term deposit within the forecast horizon, or a decision to hold. |
+
+Python calculates the amounts, dates and term limits. The agents send forecast facts to Qwen through HTTPX. Qwen selects relevant evidence, risks and a next step. The application validates the response against the scenario and adds counterparty and account details locally.
+
+## Decisions and audit history
+
+Each assessment stores its forecast, inputs, recommendation, agent role and request UUID. The decision ID identifies the saved assessment; the simulation ID identifies a simulated action. Approval, creation of the simulated request and the audit entry are recorded in one database transaction. Rejection records the owner's decision. A hold recommendation receives the status `no_action`.
+
+Scenario comparisons show how borrowing, repayment or deposit settlement would affect cash under the selected assumptions. Bank execution is established from booked transactions.
+
+[Data and forecast assumptions](data-notes.md) · [Command-line reference](agent-backend.md)
