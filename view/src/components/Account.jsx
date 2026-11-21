@@ -1,4 +1,5 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useId, useState } from 'react';
+import { Eye, EyeOff } from 'lucide-react';
 import LanguageSwitcher from './LanguageSwitcher';
 import { api } from '../lib/api';
 import { usePreferences } from '../context/Preferences';
@@ -16,13 +17,15 @@ function Field({
   minLength,
   maxLength,
 }) {
-  return (
-    <label>
-      {label}
-      <input
+  const id = useId();
+  const { t } = usePreferences();
+  const [visible, setVisible] = useState(false);
+  const isPassword = type === 'password';
+  const input = (
+      <input id={id}
         required
         name={name}
-        type={type}
+        type={isPassword && visible ? 'text' : type}
         autoComplete={autoComplete}
         minLength={minLength}
         maxLength={name === 'code' ? 6 : maxLength}
@@ -31,7 +34,20 @@ function Field({
         value={value}
         onChange={onChange}
       />
-    </label>
+  );
+  if (!isPassword) return <label>{label}{input}</label>;
+  const action = visible ? t('Hide password', 'Ukryj hasło') : t('Show password', 'Pokaż hasło');
+  return (
+    <div className="password-field">
+      <label htmlFor={id}>{label}</label>
+      <div className="password-control">
+        {input}
+        <button type="button" aria-label={action} title={action} aria-controls={id}
+          onClick={() => setVisible(!visible)}>
+          {visible ? <EyeOff size={18} aria-hidden="true" /> : <Eye size={18} aria-hidden="true" />}
+        </button>
+      </div>
+    </div>
   );
 }
 
@@ -178,9 +194,8 @@ function Login() {
     setNotice('');
     try {
       if (e.nativeEvent.submitter?.value === 'existingCode') {
-        change(mode === 'forgot' ? 'resetCode' : 'activate');
+        change('resetCode');
         setEmail(values.email.trim());
-        setSignupPassword(values.password || '');
       } else if (mode === 'login') setUser(await api('account/login', values));
       else if (mode === 'signup' || mode === 'forgot') {
         const delivery = await api('account/' + mode, values);
@@ -357,7 +372,7 @@ function Login() {
               {t('Back to sign in', 'Powrót do logowania')}
             </button>
           )}
-          {['login', 'forgot'].includes(mode) && (
+          {mode === 'forgot' && (
             <button
               disabled={busy}
               className="btn btn-ghost"
@@ -384,14 +399,12 @@ export function Profile() {
     [busy, setBusy] = useState(false),
     [msg, setMsg] = useState(''),
     [error, setError] = useState('');
-  const [resetToken, setResetToken] = useState('');
   const [delivery, setDelivery] = useState(null);
   const labels = {
     names: t('Edit name', 'Zmień dane'),
     email: t('Change email', 'Zmień e-mail'),
     confirm: t('Confirm new email', 'Potwierdź nowy adres'),
     password: t('Change password', 'Zmień hasło'),
-    forgot: t('Reset password', 'Zresetuj hasło'),
     logout: t('Log out', 'Wyloguj się'),
     delete: t('Delete my account', 'Usuń moje konto'),
   };
@@ -411,27 +424,6 @@ export function Profile() {
       if (action === 'confirm') {
         await api('account/confirm', { ...fields, email: user.email, purpose: 'email' });
         setUser(await api('account/me'));
-      }
-      if (action === 'forgot') {
-        const receipt = await api('account/forgot', { email: user.email });
-        setDelivery({ receipt, email: user.email });
-        setMode('resetCode');
-        return;
-      }
-      if (action === 'resetCode') {
-        const { token } = await api('account/reset-code', { email: user.email, code: fields.code });
-        setResetToken(token);
-        setMode('reset');
-        return;
-      }
-      if (action === 'reset') {
-        if (fields.password !== fields.repeat) {
-          setError(t('Passwords do not match.', 'Hasła nie są takie same.'));
-          return;
-        }
-        await api('account/reset-password', { token: resetToken, password: fields.password });
-        setUser(null);
-        return;
       }
       if (['logout', 'delete', 'password'].includes(action)) {
         await api('account/' + action, fields);
@@ -454,7 +446,7 @@ export function Profile() {
       <p>{user.email}</p>
       {!mode ? (
         <div className="profile-actions">
-          {['names', 'email', 'password', 'forgot', 'logout', 'delete'].map(
+          {['names', 'email', 'password', 'logout', 'delete'].map(
             (action) => (
               <button
                 key={action}
@@ -467,7 +459,7 @@ export function Profile() {
                   setMsg('');
                   setError('');
                   setDelivery(null);
-                  if (['logout', 'forgot'].includes(action)) run(action);
+                  if (action === 'logout') run(action);
                   else setMode(action);
                 }}
               >
@@ -482,10 +474,22 @@ export function Profile() {
           className="account-form"
           onSubmit={(e) => {
             e.preventDefault();
-            run(mode, Object.fromEntries(new FormData(e.currentTarget)));
+            const fields = Object.fromEntries(new FormData(e.currentTarget));
+            let question;
+            if (mode === 'names') {
+              const name = [fields.first_name.trim(), fields.last_name.trim()].join(' ');
+              question = t(`Save your name as ${name}?`, `Zapisać imię i nazwisko jako ${name}?`);
+            } else if (mode === 'email') {
+              question = t(`Send a verification code to ${fields.email}?`, `Wysłać kod na adres ${fields.email}?`);
+            } else if (mode === 'password') {
+              question = t('Change your password and sign out?', 'Zmienić hasło i wylogować się?');
+            } else if (mode === 'delete') {
+              question = t('Permanently delete your account and workspace?', 'Trwale usunąć konto i jego dane?');
+            }
+            if (!question || window.confirm(question)) run(mode, fields);
           }}
         >
-          {['confirm', 'resetCode'].includes(mode) && delivery && (
+          {mode === 'confirm' && delivery && (
             <DeliveryNotice {...delivery} />
           )}
           {mode === 'names' &&
@@ -510,7 +514,7 @@ export function Profile() {
               type="email"
             />
           )}
-          {['confirm', 'resetCode'].includes(mode) && (
+          {mode === 'confirm' && (
             <Field
               name="code"
               label={t('Email code', 'Kod z wiadomości')}
@@ -525,23 +529,16 @@ export function Profile() {
               )}
             </p>
           )}
-          {!['names', 'resetCode'].includes(mode) && (
+          {mode !== 'names' && (
             <Field
               name="password"
-              label={
-                mode === 'reset'
-                  ? t('New password', 'Nowe hasło')
-                  : t('Current password', 'Obecne hasło')
-              }
+              label={t('Current password', 'Obecne hasło')}
               type="password"
-              autoComplete={
-                mode === 'reset' ? 'new-password' : 'current-password'
-              }
+              autoComplete="current-password"
               minLength={10}
               maxLength={256}
             />
           )}
-          {mode === 'reset' && <RepeatPassword />}
           {mode === 'password' && (
             <Field
               name="new_password"
@@ -552,25 +549,13 @@ export function Profile() {
               maxLength={256}
             />
           )}
-          {mode === 'email' && (
-            <button
-              className="btn btn-ghost"
-              type="button"
-              onClick={() => {
-                setMode('confirm');
-                setError('');
-              }}
-            >
-              {t('I have a code', 'Mam kod')}
-            </button>
-          )}
           <button
             disabled={busy}
             className={
               'btn ' + (mode === 'delete' ? 'btn-danger' : 'btn-primary')
             }
           >
-            {mode === 'delete' ? labels.delete : t('Save', 'Zapisz')}
+            {mode === 'delete' ? labels.delete : mode === 'confirm' ? labels.confirm : t('Save', 'Zapisz')}
           </button>
           <button
             disabled={busy}

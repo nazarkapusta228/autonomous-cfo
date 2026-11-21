@@ -13,6 +13,10 @@ export async function exerciseAccount(page) {
     page.getByRole('button', { name, exact: true }).click();
   const field = (name, value) =>
     page.getByLabel(name, { exact: true }).fill(value);
+  async function confirmClick(name) {
+    page.once('dialog', dialog => dialog.accept());
+    await click(name);
+  }
   async function code(address, subject) {
     await page.getByLabel('Email code', { exact: true }).waitFor();
     const query = new URLSearchParams({
@@ -30,7 +34,7 @@ export async function exerciseAccount(page) {
         const full = await (
           await fetch(inbox + '/api/v1/message/' + msg.ID)
         ).json();
-        return full.Text.match(/\b[A-F0-9]{20}\b/)[0];
+        return full.Text.match(/^([0-9]{6})\r?$/m)[1];
       }
       await new Promise((resolve) => setTimeout(resolve, 250));
     }
@@ -80,22 +84,27 @@ export async function exerciseAccount(page) {
   await page.locator('.user-chip').click();
   await click('Edit name');
   await field('First name', 'Ada');
+  page.once('dialog', dialog => dialog.dismiss());
   await click('Save');
+  assert.equal(await page.getByLabel('First name', { exact: true }).inputValue(), 'Ada');
+  await confirmClick('Save');
   await page.locator('.user-chip').filter({ hasText: 'Ada Nowak' }).waitFor();
   await click('Change email');
   await field('New email', newEmail);
   await field('Current password', password);
-  await click('Save');
+  await confirmClick('Save');
   await field('Email code', await code(newEmail, 'Confirm your new email'));
   await field('Current password', password);
-  await click('Save');
+  await click('Confirm new email');
   await page.getByText(newEmail, { exact: true }).waitFor();
   await click('Log out');
   await click('Forgot password?');
   await field('Email', newEmail);
   await click('Send reset code');
   await field('Email code', await code(newEmail, 'Reset your password'));
+  await click('Verify reset code');
   await field('New password', updatedPassword);
+  await field('Confirm new password', updatedPassword);
   await click('Set new password');
   await login(newEmail, updatedPassword);
   console.log(
@@ -107,7 +116,7 @@ export async function exerciseAccount(page) {
     await click('Cancel');
     await click('Delete my account');
     await field('Current password', updatedPassword);
-    await click('Delete my account');
+    await confirmClick('Delete my account');
     await page.getByRole('heading', { name: 'Sign in', exact: true }).waitFor();
     assert.equal(
       await page.evaluate(async () => (await fetch('/api/workspace')).status),

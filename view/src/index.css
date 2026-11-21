@@ -461,9 +461,9 @@ summary { cursor: pointer; color: var(--accent); }
 .pagination { margin-top: 1.5rem; }
 .auth-layout { min-height: 100dvh; display: grid; place-items: center; padding: 1.25rem; background: var(--bg); }
 .auth-card { display: grid; gap: 1.35rem; min-width: 0; width: min(100%, 29rem); padding: clamp(1.25rem, 4vw, 2.25rem); }
-.auth-card header, .auth-card nav, .profile-actions { display: flex; align-items: center; flex-wrap: wrap; gap: .6rem; }
+.auth-card header, .auth-card nav { display: flex; align-items: center; flex-wrap: wrap; gap: .6rem; }
 .auth-card header { justify-content: space-between; color: var(--primary); }
-.account-form, .account-form label { display: grid; gap: .65rem; }
+.profile-actions, .account-form, .account-form label { display: grid; gap: .65rem; }
 .account-form label { font-size: .9rem; gap: .3rem; }
 .account-form input { width: 100%; min-width: 0; padding: .65rem; background: var(--bg-elev); border: 1px solid var(--border); border-radius: 8px; color: var(--text); font: inherit; }
 .name-fields { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: .6rem; }
@@ -475,6 +475,12 @@ summary { cursor: pointer; color: var(--accent); }
 .auth-heading p, .auth-card small { color: var(--text-muted); }
 .auth-card .account-form { gap: 1rem; }
 .auth-card .account-form label { gap: .4rem; }
+.password-field { display: grid; gap: .4rem; }
+.password-control { position: relative; }
+.password-control input { padding-inline-end: 3rem; }
+.password-control input::-ms-reveal { display: none; }
+.password-control button { position: absolute; inset-block: 1px; inset-inline-end: 1px; width: 2.6rem; display: grid; place-items: center; background: transparent; border: 0; border-radius: 7px; color: var(--text-muted); cursor: pointer; }
+.password-control button:hover, .password-control button:focus-visible { color: var(--primary); }
 .auth-card input, .auth-card .btn { min-height: 44px; }
 .auth-card .btn { justify-content: center; text-align: center; }
 .auth-card .btn-primary { margin-top: .75rem; }
