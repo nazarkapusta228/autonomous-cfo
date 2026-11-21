@@ -14,7 +14,6 @@ function Inputs() {
   const [settings, setSettings] = useState(state.settings);
   const fields = [
     [tr("Cut-off date"), 'as_of', 'date'],
-    [tr("Opening balance before first booking (€)"), 'starting_balance', 'number'],
     [tr("Safety reserve (€)"), 'reserve', 'number'],
     [tr("Forecast days"), 'horizon_days', 'number'],
   ];
@@ -25,7 +24,7 @@ function Inputs() {
   return (
     <form className="card mb-4" onSubmit={run}>
       <div className="card-title">{tr("Forecast settings")}</div>
-      <div className="card-sub"> {tr("The opening balance is cash before the first statement entry. Booked movements through the cut-off set the forecast starting point. The reserve is the minimum cash cushion you want to keep.")} </div>
+      <div className="card-sub"> {tr("Booked movements through the cut-off set the forecast starting point. The reserve is the minimum cash cushion you want to keep.")} </div>
       <div className="controls">
         {fields.map(([label, key, type]) =>
           type === 'date' ? (
@@ -130,7 +129,7 @@ function ForecastChart({ revision }) {
     {f ? <>
       <p className="card-sub">{f.as_of} – {f.daily_balances.at(-1).day} · {t('Reserve')} {money(f.reserve)} ·
         {' '}{t('Lowest projected cash')} {money(f.minimum_balance)} ({f.minimum_on})</p>
-      <BalanceChart forecast neutral points={[{ day: f.as_of, balance: f.opening_balance }, ...f.daily_balances]} reserve={f.reserve}/>
+      <BalanceChart centered forecast neutral points={[{ day: f.as_of, balance: f.opening_balance }, ...f.daily_balances]} reserve={f.reserve}/>
     </> : current?.failed ? <p role="alert">{t('Forecast unavailable.', 'Prognoza niedostępna.')} <button className="btn btn-ghost"
       onClick={() => { setResult(null); setAttempt(previous => previous + 1); }}>{t('Retry')}</button></p>
       : <p role="status">{t('Loading forecast…', 'Wczytywanie prognozy…')}</p>}

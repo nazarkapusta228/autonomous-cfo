@@ -270,5 +270,16 @@
   "Incorrect password": "Niepoprawne hasło.",
   "Invalid or expired code": "Kod jest niepoprawny lub wygasł.",
   "Email delivery is unavailable": "Wysyłka wiadomości e-mail jest niedostępna.",
-  "Email address is unavailable": "Ten adres e-mail jest niedostępny."
+  "Email address is unavailable": "Ten adres e-mail jest niedostępny.",
+  "Days without incoming payments": "Dni bez nowych wpływów",
+  "Days you can cover planned payments and keep your reserve if no money comes in.": "Liczba dni, przez które pokryjesz planowane wydatki bez nowych wpływów, zachowując rezerwę.",
+  "Show fewer": "Pokaż mniej",
+  "Show more": "Pokaż więcej",
+  "Forecast cash surplus or deficit": "Prognozowana nadwyżka lub niedobór gotówki",
+  "1 month": "1 miesiąc",
+  "2 months": "2 miesiące",
+  "3 months": "3 miesiące",
+  "Expected receipts minus planned payments through": "Oczekiwane wpływy pomniejszone o planowane wydatki do",
+  "Booked movements through the cut-off set the forecast starting point. The reserve is the minimum cash cushion you want to keep.": "Zaksięgowane operacje do dnia odcięcia wyznaczają początek prognozy. Rezerwa to minimalny zapas gotówki.",
+  "Cash position and outlook": "Stan środków i prognoza"
 }

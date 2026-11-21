@@ -17,7 +17,7 @@ const PAGES = {
   settings: {title:'Settings', subtitle:'Workspace preferences', component:Settings},
   dashboard: {
     title: 'Financial Overview',
-    subtitle: 'Cash position and approval history',
+    subtitle: 'Cash position and outlook',
     component: Dashboard,
   },
   liquidity: {

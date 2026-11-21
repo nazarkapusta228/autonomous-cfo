@@ -32,6 +32,9 @@ function Dataset({ kind, title, description }) {
   const [upload, setUpload] = useState(null);
   const [format, setFormat] = useState('csv');
   const [notice, setNotice] = useState('');
+  const [balanceDraft, setBalanceDraft] = useState(null);
+  const balance = balanceDraft ?? state.settings.starting_balance;
+  const balanceInput = useRef();
   const picker = useRef();
   const info = state.data_files[kind];
   async function select(file) {
@@ -88,6 +91,20 @@ function Dataset({ kind, title, description }) {
           t('No data loaded', 'Brak danych')
         )}
       </p>
+      {kind === 'statement' && <form className="data-tools" onSubmit={async event => {
+        event.preventDefault();
+        if (upload) return;
+        if (await submit('forecast', {settings: {...state.settings, starting_balance: balance}})) {
+          setBalanceDraft(null);
+          setNotice(t('Changes saved.', 'Zapisano zmiany.'));
+        }
+      }}>
+        <label>{t('Opening balance before first booking (€)')}
+          <input ref={balanceInput} type="number" required step=".01" value={balance}
+            onChange={event => setBalanceDraft(event.target.value)} />
+        </label>
+        {!upload && <button className="btn btn-ghost" disabled={busy || balanceDraft === null}>{t('Save', 'Zapisz')}</button>}
+      </form>}
       <div className="data-tools">
         <label>
           {title}
@@ -237,8 +254,10 @@ function Dataset({ kind, title, description }) {
               className="btn btn-primary"
               disabled={busy || !ready}
               onClick={async () => {
+                if (kind === 'statement' && !balanceInput.current.reportValidity()) return;
                 if (
                   await submit('data/' + kind + '/import', {
+                    ...(kind === 'statement' ? {starting_balance: balance} : {}),
                     filename: upload.filename,
                     content: upload.content,
                     mapping: upload.mapping,
@@ -251,6 +270,7 @@ function Dataset({ kind, title, description }) {
                   })
                 ) {
                   clear();
+                  setBalanceDraft(null);
                   setNotice(
                     t(
                       'Imported. Forecast updated.',

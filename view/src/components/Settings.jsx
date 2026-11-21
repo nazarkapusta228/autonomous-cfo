@@ -24,7 +24,7 @@ export default function Settings() {
     <section className="card"><h3>{t('Reporting currency', 'Waluta raportowa')}</h3>
       <label className="setting-row">{t('Currency', 'Waluta')}
         <select value={prefs.currency} onChange={e => update({ currency: e.target.value })}>
-          {['EUR','PLN','USD','CHF'].map(code => <option key={code} value={code}>{code === 'EUR' ? t('EUR · Euro (Germany)', 'EUR · Euro (Niemcy)') : code}</option>)}
+          {['EUR','PLN','USD','CHF'].map(code => <option key={code} value={code}>{code}</option>)}
         </select>
       </label>
       {prefs.currency !== 'EUR' && <div aria-live="polite" className="rate-status">

@@ -15,7 +15,7 @@ import {
 } from 'recharts';
 
 
-export default function BalanceChart({ points, action, actionLabel, reserve, neutral = false, forecast = false }) {
+export default function BalanceChart({ points, action, actionLabel, reserve, centered = false, neutral = false, forecast = false }) {
   const { t: tr, money: eur } = usePreferences();
   const gradient = useId().replace(/:/g, '');
   const {state}=useApp();
@@ -68,7 +68,7 @@ export default function BalanceChart({ points, action, actionLabel, reserve, neu
       </figcaption>
       <div className="chart-wrap">
         <ResponsiveContainer width="100%" height="100%">
-          <LineChart data={data} accessibilityLayer margin={{ left: 0, right: 16, top: 14 }}>
+          <LineChart data={data} accessibilityLayer margin={{ left: 0, right: centered ? axisWidth : 16, top: 14 }}>
             {split && (
               <defs>
                 <linearGradient id={gradient} x1="0" y1="0" x2="0" y2="1">

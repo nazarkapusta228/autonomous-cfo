@@ -2,7 +2,6 @@ import { usePreferences } from '../context/Preferences';
 import React from 'react';
 import { useApp } from '../context/AppContext';
 import {CashOverview, SpendingTrends} from "./CashOverview";
-import AuditTrail from './AuditTrail';
 import BalanceChart from './BalanceChart';
 
 export default function Dashboard() {
@@ -24,7 +23,7 @@ export default function Dashboard() {
     ],
     [
       tr("Funding needed"),
-      Number(fc.funding_needed)>0 ? eur(fc.funding_needed) : tr('No shortfall','Brak niedoboru'),
+      eur(fc.funding_needed),
       !Number(fc.funding_needed) ? tr('Minimum headroom above reserve','Minimalna nadwyżka nad rezerwą')+' · '+eur(Math.min(Number(fc.minimum_balance),Number(fc.opening_balance))-Number(fc.reserve)) : tr('Forecast shortfall against the reserve of', 'Prognozowany niedobór względem rezerwy') + ' ' + eur(fc.reserve) + '.',
       false,
     ],
@@ -34,7 +33,7 @@ export default function Dashboard() {
       <CashOverview/>
       <div className="kpi-grid dashboard-kpis">
         {metrics.map(([k, v, hint, attention]) => (
-          <div className={k === tr("Funding needed") ? 'kpi funding-needed' : 'kpi'} key={k}>
+          <div className="kpi" key={k}>
             <div className="kpi-label">{k}</div>
             <div className={attention ? 'kpi-value amount-neg' : 'kpi-value'}>{v}</div>
             <p className="metric-hint">{hint}</p>
@@ -44,7 +43,7 @@ export default function Dashboard() {
       <section className="card mb-4">
         <div className="card-title">{tr("Cash balance forecast")}</div>
         <p className="card-sub"> {tr("Starting at the cut-off balance, each day adds expected receipts and subtracts planned payments. The dashed line marks your safety reserve.")} </p>
-        <BalanceChart forecast
+        <BalanceChart centered forecast
           neutral
           points={[{ day: fc.as_of, balance: fc.opening_balance }, ...fc.daily_balances]}
           reserve={fc.reserve}
@@ -68,15 +67,6 @@ export default function Dashboard() {
           alerts.push(tr('Agent decision awaiting approval', 'Decyzja agenta czeka na zatwierdzenie'));
         return alerts.length > 0 && <section className="card mb-4"><h3>{tr('Notifications','Powiadomienia')}</h3>{alerts.map(message => <p key={message}>{message}</p>)}</section>;
       })()}
-      <section className="card">
-        <div className="card-title">{tr("Workspace audit")}</div>
-        <p className="card-sub"> {tr("Agent runs, decisions and simulations recorded in this workspace, with their reference numbers.")} </p>
-        {state.audit.length ? (
-          <AuditTrail events={state.audit} />
-        ) : (
-          <p className="text-muted">{tr("No activity recorded yet.")}</p>
-        )}
-      </section>
     </>
   );
 }

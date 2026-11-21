@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { usePreferences } from '../context/Preferences';
-import { cents, monthHistory, coverageScores } from '../lib/cashMetrics';
+import { api } from '../lib/api';
+import { cents, monthHistory, budgetCoverage } from '../lib/cashMetrics';
 
-function Ring({ value, label, detail }) {
+function Ring({ value, label, detail, display = value == null ? '—' : value + '%' }) {
   const color =
     value == null
       ? 'var(--border)'
@@ -17,7 +18,7 @@ function Ring({ value, label, detail }) {
       <svg
         viewBox="0 0 80 80"
         role="img"
-        aria-label={label + ' ' + (value == null ? '—' : value + '%')}
+        aria-label={label + ' ' + display}
         style={{ color }}
       >
         <circle className="ring-track" cx="40" cy="40" r="35" />
@@ -34,7 +35,7 @@ function Ring({ value, label, detail }) {
           transform="rotate(-90 40 40)"
         />
         <text x="40" y="45" textAnchor="middle">
-          {value == null ? '—' : value + '%'}
+          {display}
         </text>
       </svg>
       <strong>{label}</strong>
@@ -47,12 +48,22 @@ export function CashOverview() {
   const { state } = useApp(),
     { t, money } = usePreferences();
   const { forecast: fc, reconciliation: r } = state.analysis;
-  const months = monthHistory(state.transactions, fc.as_of);
-  const [budget, fixed] = coverageScores(
+  const budget = budgetCoverage(
     state.analysis,
-    months,
     state.transactions.length > 0 || state.analysis.plan.length > 0,
   );
+  const outflows = new Map();
+  for (const flow of state.analysis.plan) {
+    const amount = cents(flow.amount_eur);
+    if (amount < 0) outflows.set(flow.date, (outflows.get(flow.date) ?? 0) - amount);
+  }
+  let available = cents(fc.opening_balance) - cents(fc.reserve);
+  let coveredDays = 0;
+  for (const point of fc.daily_balances) {
+    available -= outflows.get(point.day) ?? 0;
+    if (available < 0) break;
+    coveredDays++;
+  }
   const due = r.outstanding
     .filter((i) => Number(i.amount_eur) < 0)
     .reduce((s, i) => s - cents(i.amount_eur), 0);
@@ -65,7 +76,7 @@ export function CashOverview() {
         <dl className="data-strip">
           <div>
             <dt>{t('Current balance', 'Saldo bieżące')}</dt>
-            <dd>{money(fc.opening_balance)}</dd>
+            <dd className={Number(fc.opening_balance) > 0 ? 'amount-pos' : 'amount-neg'}>{money(fc.opening_balance)}</dd>
           </div>
           <div>
             <dt>
@@ -74,7 +85,7 @@ export function CashOverview() {
                 'Nierozliczone zobowiązania z faktur',
               )}
             </dt>
-            <dd>{state.has_invoices ? money(due / 100) : '—'}</dd>
+            <dd className={due ? 'amount-neg' : undefined}>{due ? money(due / 100) : '—'}</dd>
           </div>
         </dl>
       </div>
@@ -87,12 +98,10 @@ export function CashOverview() {
         )}
       />
       <Ring
-        value={fixed}
-        label={t('Fixed-cost coverage', 'Pokrycie kosztów stałych')}
-        detail={t(
-          'Receipts ÷ rent and payroll, last 3 closed months. Capped at 100%.',
-          'Wpływy ÷ czynsz i płace, ostatnie 3 zamknięte miesiące. Maks. 100%.',
-        )}
+        value={budget == null ? null : Math.round(100 * coveredDays / fc.daily_balances.length)}
+        display={budget == null ? '—' : String(coveredDays)}
+        label={t('Days without incoming payments')}
+        detail={t('Days you can cover planned payments and keep your reserve if no money comes in.') + ' (' + fc.daily_balances.length + ' ' + t('days') + ')'}
       />
     </section>
   );
@@ -103,33 +112,23 @@ export function SpendingTrends() {
     { t, money } = usePreferences();
   const history = monthHistory(state.transactions, state.settings.as_of),
     months = history.slice(-6);
-  const [period, setPeriod] = useState(3),
-    [budget, setBudget] = useState('');
-  const recent = history.slice(-3),
-    basis = history.slice(-period);
-  const sum = (rows, key) => rows.reduce((s, r) => s + r[key], 0);
-  const available = recent.every((m) => m.rows),
-    equipmentAvailable = basis.every((m) => m.rows);
-  const spare = sum(basis, 'receipts') - sum(basis, 'out');
+  const [expanded, setExpanded] = useState(false);
   const categories = [
     ...new Set(months.flatMap((m) => Object.keys(m.categories))),
   ].sort();
-  function trend(label, values) {
-    const observed = values.filter((v) => v != null);
-    const start = observed.length >= 2 ? observed[0] : null,
-      end = observed.at(-1);
-    const growth =
-      start && end != null ? Math.round((100 * (end - start)) / start) : null;
-    return (
-      <tr key={label}>
-        <th scope="row">{label}</th>
-        {values.map((v, i) => (
-          <td key={i}>{v == null ? '—' : money(v / 100)}</td>
-        ))}
-        <td>{growth == null ? '—' : (growth > 0 ? '+' : '') + growth + '%'}</td>
-      </tr>
-    );
-  }
+  const rows = [
+    [t('Cash receipts', 'Wpływy'), months.map(m => m.rows ? m.receipts : null)],
+    [t('Average payroll payment', 'Średnia wypłata'), months.map(m => m.payrollCount ? m.payroll / m.payrollCount : null)],
+    [t('Payroll per named recipient', 'Płace na odbiorcę'), months.map(m => m.payees.size && !m.unnamedPayroll ? m.payroll / m.payees.size : null)],
+    ...categories.map(c => [t(c), months.map(m => m.rows ? (m.categories[c] ?? 0) : null)]),
+  ].map(([label, values]) => {
+    const observed = values.filter(v => v != null);
+    const growth = observed.length >= 2 && observed[0]
+      ? 100 * (observed.at(-1) - observed[0]) / observed[0] : null;
+    return {label, values, growth};
+  });
+  const rank = row => row.growth == null ? -1 : Math.abs(row.growth);
+  rows.sort((a, b) => rank(b) - rank(a));
   return (
     <>
       <section className="card mb-4">
@@ -152,116 +151,60 @@ export function SpendingTrends() {
               </tr>
             </thead>
             <tbody>
-              {trend(
-                t('Cash receipts', 'Wpływy'),
-                months.map((m) => (m.rows ? m.receipts : null)),
-              )}
-              {trend(
-                t('Average payroll payment', 'Średnia wypłata'),
-                months.map((m) =>
-                  m.payrollCount ? m.payroll / m.payrollCount : null,
-                ),
-              )}
-              {trend(
-                t('Payroll per named recipient', 'Płace na odbiorcę'),
-                months.map((m) =>
-                  m.payees.size && !m.unnamedPayroll
-                    ? m.payroll / m.payees.size
-                    : null,
-                ),
-              )}
-              {categories.map((c) =>
-                trend(
-                  t(c),
-                  months.map((m) => (m.rows ? (m.categories[c] ?? 0) : null)),
-                ),
-              )}
+              {(expanded ? rows : rows.slice(0, 5)).map(({label, values, growth}, index) => (
+                <tr key={index}>
+                  <th scope="row">{label}</th>
+                  {values.map((v, i) => <td key={i}>{v == null ? '—' : money(v / 100)}</td>)}
+                  <td>{growth == null ? '—' : (Math.round(growth) > 0 ? '+' : '') + Math.round(growth) + '%'}</td>
+                </tr>
+              ))}
             </tbody>
           </table>
         </div>
+        {rows.length > 5 && <button className="btn btn-ghost section" aria-expanded={expanded}
+          onClick={() => setExpanded(!expanded)}>
+          {expanded ? '▴ ' + t('Show fewer') : '▾ ' + t('Show more') + ' (' + (rows.length - 5) + ')'}
+        </button>}
       </section>
-      <section className="card mb-4">
-        <h3>{t('Next three months', 'Następne trzy miesiące')}</h3>
-        <p className="card-sub">
-          {t(
-            'Estimate if the last three closed months repeat. Receipts include all incoming bank payments.',
-            'Szacunek przy powtórzeniu ostatnich trzech zamkniętych miesięcy. Wpływy obejmują wszystkie uznania rachunku.',
-          )}
-        </p>
-        <dl className="data-strip">
-          {[
-            [
-              t('Expected receipts', 'Szacowane wpływy'),
-              sum(recent, 'receipts'),
-            ],
-            [
-              t('Rent and payroll', 'Czynsz i płace'),
-              sum(recent, 'rent') + sum(recent, 'payroll'),
-            ],
-            [
-              t(
-                'Receipts after rent and payroll',
-                'Wpływy po czynszu i płacach',
-              ),
-              sum(recent, 'receipts') -
-                sum(recent, 'rent') -
-                sum(recent, 'payroll'),
-            ],
-            [
-              t('Cash after all spending', 'Przepływ po wszystkich wydatkach'),
-              sum(recent, 'receipts') - sum(recent, 'out'),
-            ],
-          ].map(([k, v]) => (
-            <div key={k}>
-              <dt>{k}</dt>
-              <dd>{available ? money(v / 100) : '—'}</dd>
-            </div>
-          ))}
-        </dl>
-        <h4>{t('Equipment purchase', 'Zakup sprzętu')}</h4>
-        <div className="data-tools">
-          <label>
-            {t('Equipment price (EUR)', 'Cena sprzętu (EUR)')}
-            <input
-              type="number"
-              min=".01"
-              step=".01"
-              value={budget}
-              onChange={(e) => setBudget(e.target.value)}
-            />
-          </label>
-          <label>
-            {t('Cash flow period', 'Okres przepływów')}
-            <select
-              value={period}
-              onChange={(e) => setPeriod(Number(e.target.value))}
-            >
-              <option value="3">
-                {t('Last 3 closed months', 'Ostatnie 3 zamknięte miesiące')}
-              </option>
-              <option value="12">
-                {t('Last 12 closed months', 'Ostatnie 12 zamkniętych miesięcy')}
-              </option>
-            </select>
-          </label>
-        </div>
-        <p className="projection-result">
-          {!equipmentAvailable
-            ? t(
-                'Insufficient statement history for this period.',
-                'Brak wystarczającej historii wyciągu dla tego okresu.',
-              )
-            : Number(budget) > 0
-              ? (spare >= cents(budget)
-                  ? t('Cash remaining after purchase', 'Nadwyżka po zakupie')
-                  : t('Additional cash needed', 'Brakująca kwota')) +
-                ' · ' +
-                money(Math.abs(spare - cents(budget)) / 100)
-              : t('Net cash generated', 'Przepływ netto') +
-                ' · ' +
-                money(spare / 100)}
-        </p>
-      </section>
+      <CashResult key={state.revision} revision={state.revision} />
     </>
   );
+}
+
+function CashResult({ revision }) {
+  const { t, money } = usePreferences();
+  const [months, setMonths] = useState(1);
+  const [forecast, setForecast] = useState(null);
+  const [failed, setFailed] = useState(false);
+  const [attempt, setAttempt] = useState(0);
+  useEffect(() => {
+    let active = true;
+    setFailed(false);
+    api('forecast/chart?' + new URLSearchParams({revision, quarters: 1}))
+      .then(data => { if (active) setForecast(data); })
+      .catch(() => { if (active) setFailed(true); });
+    return () => { active = false; };
+  }, [revision, attempt]);
+  let net;
+  let endDate;
+  if (forecast) {
+    const start = new Date(forecast.as_of + 'T00:00:00Z');
+    const end = new Date(Date.UTC(start.getUTCFullYear(), start.getUTCMonth() + months + 1, 0));
+    end.setUTCDate(Math.min(start.getUTCDate(), end.getUTCDate()));
+    endDate = end.toISOString().slice(0, 10);
+    const close = forecast.daily_balances.find(point => point.day === endDate);
+    if (close) net = (cents(close.balance) - cents(forecast.opening_balance)) / 100;
+  }
+  return <section className="card mb-4">
+    <h3>{t('Forecast cash surplus or deficit')}</h3>
+    <div className="controls quarter-picker" role="group" aria-label={t('Forecast period', 'Okres prognozy')}>
+      {[1, 2, 3].map(n => <button key={n} className="btn btn-ghost" aria-pressed={months === n}
+        onClick={() => setMonths(n)}>{t(['1 month', '2 months', '3 months'][n - 1])}</button>)}
+    </div>
+    {net != null ? <>
+      <p className="card-sub">{t('Expected receipts minus planned payments through')} {endDate}</p>
+      <strong className={net < 0 ? 'amount-neg' : net > 0 ? 'amount-pos' : undefined}>{money(net)}</strong>
+    </> : failed ? <p role="alert">{t('Forecast unavailable.', 'Prognoza niedostępna.')} <button className="btn btn-ghost" onClick={() => setAttempt(attempt + 1)}>{t('Retry')}</button></p>
+      : <p role="status">{t('Loading forecast…', 'Wczytywanie prognozy…')}</p>}
+  </section>;
 }

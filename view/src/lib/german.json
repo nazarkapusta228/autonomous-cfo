@@ -604,5 +604,16 @@
   "Failed to fetch": "Die Verbindung zum Server ist fehlgeschlagen.",
   "CSV row": "CSV-Zeile",
   "Cash flow plan row": "Zeile im Liquiditätsplan",
-  "Expected a table with headers separated by commas, tabs, ; or |": "Verwenden Sie eine Tabelle mit Kopfzeile. Zulässige Trennzeichen sind Komma, Tabulator, Semikolon und senkrechter Strich."
+  "Expected a table with headers separated by commas, tabs, ; or |": "Verwenden Sie eine Tabelle mit Kopfzeile. Zulässige Trennzeichen sind Komma, Tabulator, Semikolon und senkrechter Strich.",
+  "Days without incoming payments": "Tage ohne Zahlungseingänge",
+  "Days you can cover planned payments and keep your reserve if no money comes in.": "So lange können Sie geplante Zahlungen ohne neue Eingänge decken und Ihre Reserve halten.",
+  "Show fewer": "Weniger anzeigen",
+  "Show more": "Mehr anzeigen",
+  "Forecast cash surplus or deficit": "Prognostizierter Nettozufluss oder -abfluss",
+  "1 month": "1 Monat",
+  "2 months": "2 Monate",
+  "3 months": "3 Monate",
+  "Expected receipts minus planned payments through": "Erwartete Eingänge abzüglich geplanter Auszahlungen bis",
+  "Booked movements through the cut-off set the forecast starting point. The reserve is the minimum cash cushion you want to keep.": "Buchungen bis zum Stichtag bestimmen den Anfangssaldo der Prognose. Die Reserve ist Ihr gewünschter Mindestbestand.",
+  "Cash position and outlook": "Liquiditätslage und Ausblick"
 }

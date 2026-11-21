@@ -9,7 +9,7 @@ Autonomous CFO helps a business see when cash may run short and how much it can 
 1. **Create an account.** Enter your name, email and password, then enter the verification code sent to your email. Codes expire after 20 minutes. Sign-in lasts seven days. Use **My profile** to change your details or delete your account and workspace. Resetting your password signs you out of all sessions.
 2. **Import data.** In **Data**, select **Bank statement** for booked transactions, **Cash flow plan** for expected payments and income, or **Invoices** for amounts owed or due. Upload a CSV, tabular TXT file or JSON array of objects. Current data can be exported as CSV, TXT, JSON or PDF. A [sample statement](data/sample/pizzeria-amalfi-2025.csv) is included.
 3. **Review cash and payments.** The **Dashboard** shows balances, outstanding payables and spending trends. Use **Transactions** to filter bank entries, correct a payment or resolve an invoice match. Category and transaction-type edits can affect payments outside the current date filter.
-4. **Review a decision.** In **Liquidity Agent**, set the opening balance, reserve and forecast dates. Run the forecast, inspect the planned payments, then run the agent. Compare available credit options if funding is needed.
+4. **Review a decision.** Enter the opening balance under **Data → Bank statement**. In **Liquidity Agent**, set the reserve and forecast dates. Run the forecast, inspect the planned payments, then run the agent. Compare available credit options if funding is needed.
 5. **Compare scenarios.** Under the forecast chart in **Liquidity Agent**, use **Operating cash scenario** to explore changes in rent, payroll or the timing of receipts.
 
 ## Local setup

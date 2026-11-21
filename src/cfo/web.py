@@ -199,6 +199,7 @@ class Upload(Change):
 
 
 class MappedUpload(Upload):
+    starting_balance: Money | None = None
     mapping: dict[str, str]
     constants: dict[str, str] = Field(default_factory=dict)
 
@@ -260,6 +261,10 @@ def upload_file(request: Request, kind: files.Kind, body: MappedUpload):
     with current(request, body.revision) as (conn, dsn, row):
         headers, records = files.read_file(body.filename, body.content)
         content = files.canonical(kind, headers, records, body.mapping, body.constants)
+        if body.starting_balance is not None:
+            if kind != "statement":
+                raise ValueError("An opening balance applies only to a bank statement")
+            row["settings"] = dict(row["settings"], starting_balance=str(body.starting_balance))
         replace_data(conn, dsn, row, kind, content)
         if kind == "statement" and body.mapping.get("Category"):
             categories = [

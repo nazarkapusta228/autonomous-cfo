@@ -55,7 +55,7 @@ export function monthHistory(rows, asOf) {
   return months;
 }
 
-export function coverageScores(analysis, months, hasData) {
+export function budgetCoverage(analysis, hasData) {
   let cash =
     cents(analysis.forecast.opening_balance) - cents(analysis.forecast.reserve);
   let worst = 100;
@@ -74,19 +74,8 @@ export function coverageScores(analysis, months, hasData) {
     if (due) worst = Math.min(worst, (100 * Math.max(0, cash)) / due);
     cash -= due;
   }
-  const recent = months.slice(-3);
-  const fixed = recent.reduce((sum, m) => sum + m.rent + m.payroll, 0);
-  return [
-    hasData ? Math.round(worst) : null,
-    recent.every((m) => m.rows) && fixed
-      ? Math.min(
-          100,
-          Math.round(
-            (100 * recent.reduce((s, m) => s + m.receipts, 0)) / fixed,
-          ),
-        )
-      : null,
-  ];
+  return hasData ? Math.round(worst) : null;
+
 }
 
 export function stressForecast(
