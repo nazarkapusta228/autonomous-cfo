@@ -20,6 +20,7 @@ class Transaction(BaseModel):
     amount: Money
     currency: Annotated[str, Field(pattern=r"^[A-Z]{3}$")]
     amount_eur: Money
+    booked_rate: Annotated[Decimal, Field(gt=0)] | None = None
 
 
 class ForecastPoint(BaseModel):

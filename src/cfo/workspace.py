@@ -154,9 +154,9 @@ def snapshot(conn, dsn, row):
         "booked_chf": str(sum((t.amount for t in foreign), Decimal(0))),
         "booked_eur": str(sum((t.amount_eur for t in foreign), Decimal(0))),
         "rates": [
-            {"day": t.value_on, "rate": str((t.amount_eur / t.amount).quantize(Decimal(".0001")))}
+            {"day": t.value_on, "rate": str(t.booked_rate)}
             for t in foreign
-            if t.amount
+            if t.booked_rate is not None
         ],
     }
     assessments = {}

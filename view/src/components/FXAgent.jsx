@@ -27,7 +27,8 @@ export default function FXAgent() {
   const fx = {
     booked_foreign: rows.reduce((sum, row) => sum + Number(row.amount), 0).toFixed(2),
     booked_eur: rows.reduce((sum, row) => sum + Number(row.amount_eur), 0),
-    rates: rows.filter(row => Number(row.amount)).map(row => ({day: row.value_on, rate: row.amount_eur / row.amount})).reverse(),
+    rates: rows.filter(row => row.booked_rate != null)
+      .map(row => ({ day: row.value_on, rate: row.booked_rate })).reverse(),
   };
   return (
     <>

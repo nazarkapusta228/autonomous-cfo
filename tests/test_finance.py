@@ -20,6 +20,7 @@ def test_full_sample_and_fx():
     assert len(chf) == 12
     assert chf[0].amount == Decimal("-4166.67")
     assert chf[0].amount_eur == Decimal("-4341.67")
+    assert chf[0].booked_rate == Decimal("1.042")
     points = daily_balances(transactions, Decimal("0"))
     assert len(points) == 365
     assert points[-1].balance == sum((t.amount_eur for t in transactions), Decimal(0))

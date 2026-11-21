@@ -44,13 +44,15 @@ def parse_statement(content: bytes) -> list[Transaction]:
             if not re.fullmatch(r"[A-Z]{3}", currency):
                 raise ValueError("Expected a three-letter currency code")
             converted = amount
+            booked_rate = None
             if currency != "EUR":
                 rate = re.search(
                     rf"@\s*(\d+(?:\.\d+)?)\s+EUR/{currency}\b", row["Payment Reference"]
                 )
                 if rate is None or Decimal(rate[1]) <= 0:
                     raise ValueError(f"{currency} transaction has no positive EUR/{currency} rate")
-                converted = (amount * Decimal(rate[1])).quantize(
+                booked_rate = Decimal(rate[1])
+                converted = (amount * booked_rate).quantize(
                     Decimal("0.01"), rounding=ROUND_HALF_UP
                 )
             result.append(
@@ -65,6 +67,7 @@ def parse_statement(content: bytes) -> list[Transaction]:
                     amount=amount,
                     currency=currency,
                     amount_eur=converted,
+                    booked_rate=booked_rate,
                 )
             )
         except ValueError as exc:

@@ -55,13 +55,18 @@ export default function Dashboard() {
         />
       </section>
       {(() => {
-        const previous = state.history.at(-2), latest = state.history.at(-1);
+        const closingCents = Math.round(Number(fc.opening_balance) * 100);
+        const movementCents = state.transactions
+          .filter(row => row.booked_on === fc.as_of || row.value_on === fc.as_of)
+          .reduce((sum, row) => sum + Math.round(Number(row.amount_eur) * 100), 0);
+        const previousCents = closingCents - movementCents;
         const alerts = [];
-        if (prefs.change && previous && Number(previous.balance) !== 0 &&
-          Math.abs((latest.balance - previous.balance) / previous.balance) >= 0.2)
-          alerts.push(tr('Large daily balance change', 'Duża dzienna zmiana salda') + ' · ' + latest.day);
-        if (prefs.low && Number(fc.minimum_balance) <= Math.max(Number(fc.reserve), 0))
-          alerts.push(tr('Forecast balance reaches the reserve', 'Prognozowane saldo osiąga poziom rezerwy') + ' · ' + fc.minimum_on + ' · ' + eur(fc.minimum_balance));
+        if (prefs.change && previousCents !== 0 && Math.abs(movementCents / previousCents) >= 0.2)
+          alerts.push(tr('Large daily balance change', 'Duża dzienna zmiana salda') + ' · ' + fc.as_of);
+        const firstLow = [{ day: fc.as_of, balance: fc.opening_balance }, ...fc.daily_balances]
+          .find(point => Number(point.balance) <= Number(fc.reserve));
+        if (prefs.low && firstLow)
+          alerts.push(tr('Forecast balance reaches the reserve', 'Prognozowane saldo osiąga poziom rezerwy') + ' · ' + firstLow.day + ' · ' + eur(firstLow.balance));
         if (prefs.approval && Object.values(state.assessments).some(a => a.status === 'pending'))
           alerts.push(tr('Agent decision awaiting approval', 'Decyzja agenta czeka na zatwierdzenie'));
         return alerts.length > 0 && <section className="card mb-4"><h3>{tr('Notifications','Powiadomienia')}</h3>{alerts.map(message => <p key={message}>{message}</p>)}</section>;
