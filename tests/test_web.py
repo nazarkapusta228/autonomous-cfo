@@ -74,27 +74,10 @@ def test_workspace_isolation_uploads_and_stale_edits(postgres_url, monkeypatch):
     assert state(guest)["has_invoices"] is False
 
 
-def test_simulations_are_persistent_and_idempotent(postgres_url, monkeypatch):
-    monkeypatch.setenv("DATABASE_URL", postgres_url)
-    browser = client()
-    revision = state(browser)["revision"]
-    fx = dict(
-        revision=revision,
-        kind="fx_forward",
-        amount="100",
-        effective_on="2025-06-10",
-        eur_per_chf="1.0425",
-    )
-    first = browser.post("/api/simulations", json=fx)
-    assert first.is_success
-    again = browser.post("/api/simulations", json={**fx, "amount": "100.00"})
-    assert again.json() == first.json()
-    snapshot = state(browser)
-    assert snapshot["simulations"][0]["basis"]["estimated_eur"] == "104.25"
-    assert len(snapshot["audit"]) == 1
-    assert browser.post("/api/simulations", json={**fx, "eur_per_chf": None}).status_code == 422
-    browser.headers.pop("X-CFO-Client")
-    assert browser.post("/api/simulations", json=fx).status_code == 403
+def test_retired_workspace_actions_are_unavailable():
+    browser = TestClient(app, headers={"X-CFO-Client": "dashboard"})
+    for path in ("/api/simulations", "/api/agents/investment"):
+        assert browser.post(path, json={}).status_code in {404, 405}
 
 
 def test_agent_decision_and_comparison_routes(postgres_url, monkeypatch):

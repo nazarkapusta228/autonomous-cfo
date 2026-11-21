@@ -80,7 +80,7 @@ export function AccountGate({ children }) {
     return (
       <main className="auth-layout">
         <div className="card">
-          {error || t('Loading…', 'Wczytywanie…')}
+          {t(error) || t('Loading…', 'Wczytywanie…')}
           {error && (
             <button className="btn btn-primary" onClick={load}>
               {t('Retry', 'Ponów')}

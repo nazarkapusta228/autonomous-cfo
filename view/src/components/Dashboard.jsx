@@ -64,7 +64,7 @@ export default function Dashboard() {
           .find(point => Number(point.balance) <= Number(fc.reserve));
         if (prefs.low && firstLow)
           alerts.push(tr('Forecast balance reaches the reserve', 'Prognozowane saldo osiąga poziom rezerwy') + ' · ' + firstLow.day + ' · ' + eur(firstLow.balance));
-        if (prefs.approval && Object.values(state.assessments).some(a => a.status === 'pending'))
+        if (prefs.approval && state.assessments.liquidity?.status === 'pending')
           alerts.push(tr('Agent decision awaiting approval', 'Decyzja agenta czeka na zatwierdzenie'));
         return alerts.length > 0 && <section className="card mb-4"><h3>{tr('Notifications','Powiadomienia')}</h3>{alerts.map(message => <p key={message}>{message}</p>)}</section>;
       })()}

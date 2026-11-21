@@ -46,6 +46,10 @@ export async function exerciseAccount(page) {
     await click('Sign in');
     await page.locator('.user-chip').waitFor();
   }
+  await click('Deutsch');
+  await page.getByRole('heading', {name:'Anmelden', exact:true}).waitFor();
+  await page.reload();
+  assert.equal(await page.locator('html').getAttribute('lang'), 'de');
   await click('Polski');
   await page
     .getByRole('heading', { name: 'Zaloguj się', exact: true })

@@ -52,7 +52,7 @@ export function AppProvider({ children }) {
         children
       ) : (
         <div className="card workspace-loading" role="status">
-          {error || tr("Loading workspace…")} {error && <button onClick={refresh}>{tr("Retry")}</button>}
+          {tr(error) || tr("Loading workspace…")} {error && <button onClick={refresh}>{tr("Retry")}</button>}
         </div>
       )}
       {question && <MessageDialog confirmation message={question.message} close={answer=>{

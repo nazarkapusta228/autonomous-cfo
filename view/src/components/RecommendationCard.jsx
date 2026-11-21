@@ -9,7 +9,6 @@ import BalanceChart from './BalanceChart';
 const labels = {
   hold: 'Hold cash',
   propose_credit: 'Bridge credit line',
-  propose_investment: 'Term deposit',
 };
 
 function Comparison({ role, proposal, fc }) {
@@ -93,7 +92,7 @@ export default function RecommendationCard({ role }) {
           disabled={busy || !!unresolved}
           onClick={() => submit('agents/' + role)}
         >
-          {busy ? tr("Working…") : role === 'liquidity' ? tr('Run liquidity agent') : tr('Run investment agent')}
+          {busy ? tr("Working…") : tr('Run liquidity agent')}
         </button>
       </div>
     );
@@ -107,22 +106,6 @@ export default function RecommendationCard({ role }) {
         <p> {tr("Effective")} {p.execute_on}
           {p.available_until && ' ' + tr("· Available through") + ' ' + p.available_until}
         </p>
-      )}
-      {role === 'investment' && (
-        <dl className="data-strip">
-          <div>
-            <dt>{tr("Operations")}</dt>
-            <dd>{eur(p.operating_cash)}</dd>
-          </div>
-          <div>
-            <dt>{tr("Safety reserve")}</dt>
-            <dd>{eur(p.reserve_cash)}</dd>
-          </div>
-          <div>
-            <dt>{tr("Free to invest")}</dt>
-            <dd className="amount-pos">{eur(p.free_cash)}</dd>
-          </div>
-        </dl>
       )}
       {role === 'liquidity' && (
         <dl className="data-strip">
@@ -140,22 +123,6 @@ export default function RecommendationCard({ role }) {
           </div>
         </dl>
       )}
-      {role === 'investment' &&
-        Number(p.operating_cash) + Number(p.reserve_cash) + Number(p.free_cash) > 0 && (
-          <div
-            className="allocation"
-            role="img"
-            aria-label={tr("Share of cash for operations, reserve and investment")}
-          >
-            {[p.operating_cash, p.reserve_cash, p.free_cash].map((v, i) => (
-              <span
-                key={i}
-                title={[tr("Operations"), tr("Safety reserve"), tr("Free to invest")][i] + ' · ' + eur(v)}
-                style={{ flex: Number(v) }}
-              />
-            ))}
-          </div>
-        )}
       {role === 'liquidity' && state.analysis.forecast.drivers.length > 0 && (
         <table className="table section">
           <caption>{tr("Planned outflows contributing to the shortfall")}</caption>
@@ -170,7 +137,7 @@ export default function RecommendationCard({ role }) {
             {state.analysis.forecast.drivers.map((d, i) => (
               <tr key={i}>
                 <td className="date-cell">{d.date}</td>
-                <td>{d.category}</td>
+                <td>{tr(d.category)}</td>
                 <td>{eur(d.amount_eur)}</td>
               </tr>
             ))}

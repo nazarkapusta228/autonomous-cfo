@@ -1,11 +1,9 @@
 import React, { useState } from 'react';
 import { usePreferences } from '../context/Preferences';
-import { useApp } from '../context/AppContext';
 import { stressForecast, operatingCost } from '../lib/cashMetrics';
 import BalanceChart from './BalanceChart';
-import SimulationForm from './SimulationForm';
 
-function OperatingScenario({ analysis }) {
+export default function OperatingScenario({ analysis }) {
   const { t, money } = usePreferences();
   const [rent, setRent] = useState('0'),
     [salary, setSalary] = useState('0'),
@@ -133,85 +131,5 @@ function OperatingScenario({ analysis }) {
         </p>
       )}
     </section>
-  );
-}
-
-export default function Simulations() {
-  const { state } = useApp(),
-    { t } = usePreferences();
-  const currencies = [
-    ...new Set(
-      state.statement_rows.map((r) => r.currency).filter((c) => c !== 'EUR'),
-    ),
-  ].sort();
-  const [choice, setChoice] = useState('');
-  const currency = currencies.includes(choice) ? choice : currencies[0];
-  const last = state.transactions.find(
-    (r) => r.currency === currency && r.booked_rate,
-  );
-  const tax = state.analysis.plan.find(
-    (p) =>
-      Number(p.amount_eur) < 0 &&
-      /tax|steuer/i.test(p.category + ' ' + p.description),
-  );
-  return (
-    <>
-      <OperatingScenario key={state.revision} analysis={state.analysis} />
-      {currency && (
-        <>
-          <label className="booking-month">
-            {t('Statement currency', 'Waluta wyciągu')}
-            <select
-              value={currency}
-              onChange={(e) => setChoice(e.target.value)}
-            >
-              {currencies.map((c) => (
-                <option key={c}>{c}</option>
-              ))}
-            </select>
-          </label>
-          <SimulationForm
-            key={currency + state.revision}
-            kind="fx_forward"
-            currency={currency}
-            lastRate={last && { day: last.value_on, rate: last.booked_rate }}
-            title={t('CHF forward simulation').replace('CHF', currency)}
-            description={t(
-              'Enter a future obligation and an assumed exchange rate.',
-              'Podaj kwotę zobowiązania i zakładany kurs.',
-            )}
-          />
-        </>
-      )}
-      <SimulationForm
-        key={'tax' + state.revision}
-        kind="tax_prepayment"
-        suggested={tax ? String(-Number(tax.amount_eur)) : ''}
-        suggestedDate={tax?.date}
-        title={t('Adjusted tax prepayment')}
-        description={t(
-          'Use an amount from a tax notice or your accountant. Approving records a simulated filing in this workspace.',
-        )}
-      />
-      <div className="grid-even enquiry-pair" key={state.revision}>
-        <SimulationForm
-          kind="money_market"
-          title={t('Money market enquiry')}
-          suggested={
-            state.assessments.investment?.recommendation.free_cash || ''
-          }
-          description={t(
-            'Simulate a request for a fund quote within the investment agent’s free-cash limit. Run the assessment first.',
-          )}
-        />
-        <SimulationForm
-          kind="capex"
-          title={t('Equipment finance enquiry')}
-          description={t(
-            'Enter the equipment budget and financing date for a simulated credit enquiry. Terms require a lender quote.',
-          )}
-        />
-      </div>
-    </>
   );
 }

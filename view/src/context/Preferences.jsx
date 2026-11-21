@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { useExchangeRates } from '../lib/exchangeRates';
 import polish from '../lib/polish.json';
+import german from '../lib/german.json';
 
 const Context = createContext(null);
 const defaults = { language: 'en', theme: 'dark', size: 'medium', currency: 'EUR', low: true, change: true, changeThreshold: 20, approval: true };
@@ -20,8 +21,16 @@ export function Preferences({ children }) {
     document.documentElement.dataset.size = prefs.size;
     try { localStorage.setItem(key, JSON.stringify(prefs)); } catch {}
   }, [prefs]);
-  const t = (english, pl) => prefs.language === 'pl' ? (pl ?? polish[english] ?? english) : english;
-  const locale = prefs.language === 'pl' ? 'pl-PL' : 'en-IE';
+  function t(english, pl) {
+    if (prefs.language === 'de' && typeof english === 'string') {
+      if (Object.hasOwn(german, english)) return german[english];
+      const rowError = /^(Row|CSV row|Cash flow plan row) (\d+): (.+)$/.exec(english);
+      if (rowError) return german[rowError[1]] + ' ' + rowError[2] + ': ' + t(rowError[3]);
+    }
+    if (prefs.language === 'pl') return pl ?? (Object.hasOwn(polish, english) ? polish[english] : english);
+    return english;
+  }
+  const locale = { en: 'en-IE', pl: 'pl-PL', de: 'de-DE' }[prefs.language] ?? 'en-IE';
   const originalMoney = (amount, currency, compact = false) => new Intl.NumberFormat(locale, {
     style: 'currency', currency, currencyDisplay: 'narrowSymbol',
     ...(compact ? { notation: 'compact', maximumFractionDigits: 1 } : {}),

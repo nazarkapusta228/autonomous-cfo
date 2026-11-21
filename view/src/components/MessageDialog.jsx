@@ -24,7 +24,7 @@ export default function MessageDialog({ message, confirmation, close }) {
           ? t('Confirm change', 'Potwierdź zmianę')
           : t('Request failed', 'Nie udało się wykonać operacji')}
       </h3>
-      <p>{message}</p>
+      <p>{t(message)}</p>
       <div className="modal-actions">
         <button
           autoFocus

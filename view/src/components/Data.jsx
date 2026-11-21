@@ -172,7 +172,7 @@ function Dataset({ kind, title, description }) {
           <div className="data-map">
             {Object.entries(upload.mapping).map(([field, col]) => (
               <label key={field}>
-                {field}
+                {t(field)}
                 {upload.optional.includes(field) ? '' : ' *'}
                 <select
                   value={col}
@@ -200,7 +200,7 @@ function Dataset({ kind, title, description }) {
                 {!col && !upload.optional.includes(field) ? (
                   <input
                     aria-label={
-                      t('Fixed value for ', 'Stała wartość dla ') + field
+                      t('Fixed value for ', 'Stała wartość dla ') + t(field)
                     }
                     placeholder={t(
                       'Or enter a fixed value',

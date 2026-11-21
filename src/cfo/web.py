@@ -5,7 +5,7 @@ from calendar import monthrange
 from collections.abc import Iterator
 from contextlib import contextmanager
 from datetime import date
-from decimal import ROUND_HALF_UP, Decimal, localcontext
+from decimal import Decimal
 from pathlib import Path
 from typing import Annotated, Literal
 from urllib.parse import quote
@@ -17,13 +17,11 @@ from fastapi import FastAPI, HTTPException, Query, Request, Response
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
-from psycopg.types.json import Jsonb
 from pydantic import BaseModel, ConfigDict, Field
 
 from cfo import accounts
 from cfo import data_files as files
 from cfo import workspace as ws
-from cfo.agent_types import Role
 from cfo.analysis import keyed_flows
 from cfo.config import Settings
 from cfo.db import import_statement
@@ -102,15 +100,6 @@ class Match(Change):
 
 class Terms(Change):
     terms: SettlementTerms
-
-
-class Simulation(Change):
-    kind: Literal["fx_forward", "tax_prepayment", "money_market", "capex"]
-    amount: Annotated[Money, Field(gt=0)]
-    effective_on: date
-    currency: Annotated[str | None, Field(pattern=r"^[A-Z]{3}$")] = None
-    eur_per_unit: Annotated[Decimal | None, Field(gt=0, max_digits=12, decimal_places=6)] = None
-    eur_per_chf: Annotated[Decimal | None, Field(gt=0, max_digits=12, decimal_places=6)] = None
 
 
 @contextmanager
@@ -462,12 +451,12 @@ def match(request: Request, body: Match):
     return {"saved": True}
 
 
-@app.post("/api/agents/{role}")
-def agent(request: Request, role: Role, body: Change):
+@app.post("/api/agents/liquidity")
+def agent(request: Request, body: Change):
     with current(request, body.revision, lock=False) as (_, dsn, row):
         analysis = ws.analyse(dsn, row)
-        request_id = row[role + "_request"]
-        saved = assess(Settings(), analysis, role, request_id=request_id)
+        request_id = row["liquidity_request"]
+        saved = assess(Settings(), analysis, "liquidity", request_id=request_id)
     return {"id": saved.id}
 
 
@@ -478,17 +467,17 @@ def owned(dsn, row, role):
     return rec
 
 
-@app.post("/api/agents/{role}/decision/{choice}")
-def decision(request: Request, role: Role, choice: Decision, body: Change):
+@app.post("/api/agents/liquidity/decision/{choice}")
+def decision(request: Request, choice: Decision, body: Change):
     with current(request, body.revision) as (_, dsn, row):
-        rec = owned(dsn, row, role)
+        rec = owned(dsn, row, "liquidity")
         return {"status": decide(dsn, rec.id, choice, actor="workspace owner").status}
 
 
-@app.post("/api/agents/{role}/comparison")
-def comparison(request: Request, role: Role, body: Terms):
+@app.post("/api/agents/liquidity/comparison")
+def comparison(request: Request, body: Terms):
     with current(request, body.revision) as (_, dsn, row):
-        rec = owned(dsn, row, role)
+        rec = owned(dsn, row, "liquidity")
         return compare_scenarios(rec.forecast, rec.recommendation, body.terms)
 
 
@@ -504,47 +493,6 @@ def simulate_credit(request: Request, body: CreditScenario):
         if rec.recommendation.action != "propose_credit":
             raise ValueError("A current credit recommendation is required")
         return credit_path(rec.forecast, rec.recommendation, body.product, body.annual_rate)
-
-
-@app.post("/api/simulations")
-def simulation(request: Request, body: Simulation):
-    with current(request, body.revision) as (conn, dsn, row):
-        cutoff = date.fromisoformat(row["settings"]["as_of"])
-        if body.effective_on <= cutoff:
-            raise ValueError("Choose a date after the forecast cutoff")
-        basis = body.model_dump(mode="json", exclude={"kind", "revision"}, exclude_none=True)
-        basis["amount"] = format(body.amount, ".2f")
-        if body.kind == "fx_forward":
-            currency = body.currency or "CHF"
-            rate = body.eur_per_unit or body.eur_per_chf
-            if rate is None or (body.eur_per_chf and (currency != "CHF" or body.eur_per_unit)):
-                raise ValueError("Enter one EUR exchange rate for the selected currency")
-            # Reuse the original CHF record shape so retries also match older approvals.
-            if currency == "CHF":
-                basis.pop("currency", None)
-                basis.pop("eur_per_unit", None)
-                basis["eur_per_chf"] = format(rate.normalize(), "f")
-            else:
-                basis["currency"] = currency
-                basis["eur_per_unit"] = format(rate.normalize(), "f")
-            with localcontext() as context:
-                context.prec = 32
-                estimate = body.amount * rate
-                basis["estimated_eur"] = format(
-                    estimate.quantize(Decimal(".01"), rounding=ROUND_HALF_UP), "f"
-                )
-        elif body.eur_per_chf or body.eur_per_unit or body.currency:
-            raise ValueError("An FX rate only applies to a forward")
-        if body.kind == "money_market":
-            rec = owned(dsn, row, "investment").recommendation
-            if body.amount > (rec.free_cash or 0):
-                raise ValueError("Amount exceeds assessed free cash")
-        result = conn.execute(
-            "INSERT INTO web_simulations(revision,kind,basis) VALUES (%s,%s,%s) "
-            "ON CONFLICT (revision,kind,basis) DO UPDATE SET kind=excluded.kind RETURNING id",
-            (body.revision, body.kind, Jsonb(basis)),
-        ).fetchone()
-        return {"id": result["id"]}
 
 
 if Path("view/dist/index.html").is_file():

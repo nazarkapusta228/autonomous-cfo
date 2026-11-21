@@ -41,16 +41,23 @@ import assert from 'node:assert/strict';
     assert.equal(await page.locator('.recharts-reference-area').count(), 0);
     await nav('Transactions');
     assert.equal(await page.getByLabel('Chart start date').inputValue(), '2025-12-01');
-    await nav('Simulations');
-    await click('Review fund enquiry');
-    await click('Run assessment');
-    await nav('Investment Agent');
-    await page.locator('.badge').filter({ hasText: 'no action' }).waitFor();
-    await nav('Simulations');
-    await click('Review fund enquiry');
-    await page.getByText(/This forecast has no cash available for a fund placement/).waitFor();
-    await click('Close');
-    await nav('Liquidity Agent');
+    for (const name of ['Simulations', 'Investment Agent', 'Tax Payments', 'Currency Exposure']) {
+      assert.equal(await page.getByRole('button', { name, exact: true }).count(), 0);
+    }
+    await click('Deutsch');
+    await click('Glossar');
+    await page.getByText('Fähigkeit, Zahlungsverpflichtungen bei Fälligkeit zu erfüllen.', {exact:true}).waitFor();
+    await click('Schließen');
+    await nav('Einstellungen');
+    await page.getByRole('option', { name: 'EUR · Euro (Deutschland)' }).waitFor({state:'attached'});
+    await nav('Liquiditätsagent');
+    const scenario = page.getByRole('heading', {name: 'Operatives Liquiditätsszenario'});
+    await scenario.waitFor();
+    const chart = page.getByRole('heading', { name: 'Liquiditätsprognose', exact: true });
+    assert(await chart.evaluate((el, next) => Boolean(el.compareDocumentPosition(next) & Node.DOCUMENT_POSITION_FOLLOWING), await scenario.elementHandle()));
+    await page.getByLabel('Mieterhöhung (%)').fill('25');
+    await page.getByText('Kontostand im Szenario', {exact:true}).waitFor();
+    await click('English');
     await click('Last statement date');
     await runForecast();
     await nav('Transactions');
@@ -77,30 +84,6 @@ import assert from 'node:assert/strict';
     await page.getByLabel('Opening balance before first booking (€)').fill('25000');
     await runForecast();
     assert.equal((await state()).analysis.forecast.minimum_balance, '24565.49');
-    await nav('Investment Agent');
-    await click('Run investment agent');
-    await page.getByText(/Term deposit ·/).waitFor();
-    await click('Reject');
-    await page.locator('.badge', { hasText: 'rejected' }).waitFor();
-    async function simulate(title, amount, rate) {
-      const card = page
-        .locator('section')
-        .filter({ has: page.locator('.card-title', { hasText: title }) })
-        .last();
-      await card.getByLabel(/Scenario amount/).fill(amount);
-      if (rate) await card.getByLabel('Assumed EUR per CHF').fill(rate);
-      await card.getByRole('button', { name: /^Review / }).click();
-      await click('Cancel');
-      await card.getByRole('button', { name: /^Review / }).click();
-      await click('Approve simulation');
-      await card.getByText(/Simulated #/).waitFor();
-    }
-    await nav('Simulations');
-    await simulate('Money market enquiry', '500');
-    await simulate('Equipment finance enquiry', '1500');
-    await simulate('CHF forward simulation', '1000', '1.0425');
-    await simulate('Adjusted tax prepayment', '300');
-    console.log('investment, rejection, money market, capex, FX, tax verified');
     await nav('Transactions');
     await click('Next 50');
     await page.getByText(/Page 2 of/).waitFor();
@@ -122,8 +105,6 @@ import assert from 'node:assert/strict';
     await page.getByLabel('Category', { exact: true }).selectOption('UI test category');
     await page.getByText('Account activity · 1 payments').waitFor();
     const s = await state();
-    assert.equal(s.simulations.length, 4);
-    assert.equal(s.assessments.investment.status, 'rejected');
     assert(s.audit.some((x) => x.kind === 'liquidity' && x.event === 'simulated'));
     await nav('Data');
     async function csv(label, content) {
@@ -158,7 +139,7 @@ import assert from 'node:assert/strict';
     console.log('three CSV uploads, ambiguous match and confirmed settlement verified');
     await nav('Dashboard');
     await page.setViewportSize({ width: 390, height: 844 });
-    await nav('Currency Exposure');
+    await nav('Settings');
     assert(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth));
     await deleteTestAccount();
     assert.deepEqual(errors, []);

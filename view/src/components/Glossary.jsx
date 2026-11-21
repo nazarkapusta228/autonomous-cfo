@@ -3,8 +3,7 @@ import { terms } from '../lib/glossary';
 import { usePreferences } from '../context/Preferences';
 
 export default function Glossary() {
-  const { prefs, t } = usePreferences(),
-    pl = prefs.language === 'pl';
+  const { prefs, t } = usePreferences();
   const [entry, setEntry] = useState(null),
     [list, setList] = useState(false);
   const dialog = useRef(null),
@@ -12,14 +11,14 @@ export default function Glossary() {
   useEffect(() => {
     const lookup = new Map();
     terms.forEach((row) =>
-      [row[0], row[1]]
+      [row[0], row[1], t(row[0])]
         .join('|')
         .split('|')
         .forEach((alias) => lookup.set(alias.toLowerCase(), row)),
     );
     const pattern = new RegExp(
       '(?<![\\p{L}\\p{N}])(?:' +
-        [...lookup.keys()].sort((a, b) => b.length - a.length).join('|') +
+        [...lookup.keys()].sort((a, b) => b.length - a.length).map(alias => alias.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|') +
         ')(?![\\p{L}\\p{N}])',
       'giu',
     );
@@ -75,7 +74,7 @@ export default function Glossary() {
         if (inside) {
           setEntry({
             text: item.text,
-            def: item.row[pl ? 3 : 2],
+            def: t(item.row[2], item.row[3]),
             x: inside.left,
             y: inside.top,
             bottom: inside.bottom,
@@ -111,7 +110,7 @@ export default function Glossary() {
       window.removeEventListener('resize', hide);
       window.removeEventListener('keydown', escape);
     };
-  }, [pl]);
+  }, [prefs.language]);
   useEffect(() => {
     if (list) dialog.current?.showModal();
   }, [list]);
@@ -161,8 +160,8 @@ export default function Glossary() {
           <dl>
             {terms.map((row) => (
               <div key={row[0]}>
-                <dt>{row[pl ? 1 : 0].split('|')[0]}</dt>
-                <dd>{row[pl ? 3 : 2]}</dd>
+                <dt>{t(row[0], row[1]).split('|')[0]}</dt>
+                <dd>{t(row[2], row[3])}</dd>
               </div>
             ))}
           </dl>

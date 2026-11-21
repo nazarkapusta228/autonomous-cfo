@@ -152,23 +152,12 @@ def snapshot(conn, dsn, row):
                 record["amount_eur"]
             )
     history = daily_balances(transactions, analysis.starting_balance) if transactions else []
-    foreign = sorted((t for t in visible if t.currency == "CHF"), key=lambda t: t.value_on)
-    fx = {
-        "booked_chf": str(sum((t.amount for t in foreign), Decimal(0))),
-        "booked_eur": str(sum((t.amount_eur for t in foreign), Decimal(0))),
-        "rates": [
-            {"day": t.value_on, "rate": str(t.booked_rate)}
-            for t in foreign
-            if t.booked_rate is not None
-        ],
-    }
     assessments = {}
-    for role in ("liquidity", "investment"):
-        saved = find_by_request_id(dsn, row[role + "_request"])
-        if saved:
-            assessments[role] = saved.model_dump(
-                mode="json", exclude={"context", "forecast", "request_id"}
-            )
+    saved = find_by_request_id(dsn, row["liquidity_request"])
+    if saved:
+        assessments["liquidity"] = saved.model_dump(
+            mode="json", exclude={"context", "forecast", "request_id"}
+        )
     audit = conn.execute(
         "SELECT e.occurred_at,r.agent AS kind,e.event,r.id AS number FROM web_revisions v "
         "JOIN recommendations r ON r.request_id IN (v.liquidity_request,v.investment_request) "
@@ -176,10 +165,6 @@ def snapshot(conn, dsn, row):
         "UNION ALL SELECT s.created_at,s.kind,'simulated',s.id FROM web_simulations s "
         "JOIN web_revisions v ON v.id=s.revision WHERE v.workspace_id=%s ORDER BY 1 DESC",
         (row["id"], row["id"]),
-    ).fetchall()
-    simulations = conn.execute(
-        "SELECT id,kind,basis,created_at FROM web_simulations WHERE revision=%s ORDER BY id DESC",
-        (row["revision"],),
     ).fetchall()
     statement_info = conn.execute(
         "SELECT count(*) AS total, max(greatest(booked_on,value_on)) AS last_date "
@@ -206,11 +191,9 @@ def snapshot(conn, dsn, row):
         analysis=analysis.model_dump(mode="json", exclude={"plan_keys"}),
         statement_rows=records,
         transactions=[r for r in records if r["source_row"] in visible_rows],
-        fx=fx,
         categories={k: str(v) for k, v in category_totals.items()},
         assessments=assessments,
         audit=audit,
-        simulations=simulations,
         history=[p.model_dump(mode="json") for p in history],
         has_invoices=row["invoices"] is not None,
     )

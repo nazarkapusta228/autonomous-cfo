@@ -1,3 +1,4 @@
+import OperatingScenario from './OperatingScenario';
 import { usePreferences } from '../context/Preferences';
 import React, { useEffect, useState } from 'react';
 import { useApp } from '../context/AppContext';
@@ -81,7 +82,7 @@ function FlowTable({ flows, risk = false, showSource = false }) {
           <React.Fragment key={i}><tr>
             <td className="date-cell">{flow.date}</td>
             <td>{flow.description}</td>
-            <td>{flow.category}</td>
+            <td>{tr(flow.category)}</td>
             {showSource && (
               <td>{flow.invoice_id ? tr("Invoice") + ' ' + flow.invoice_id : state.uses_statement_projection ? tr("Statement projection","Prognoza z wyciągu") : tr("Cash flow plan")}</td>
             )}
@@ -152,6 +153,7 @@ export default function LiquidityAgent() {
         </section>
         <ForecastChart key={state.revision} revision={state.revision} />
       </div>
+      <OperatingScenario key={'scenario-' + state.revision} analysis={a} />
       <section className="card mb-4">
         <div className="card-title">{tr("Payments at risk")}</div>
         <p className="card-sub"> {tr("Outgoing payments on the first payment date that closes below your safety reserve of")}{' '}

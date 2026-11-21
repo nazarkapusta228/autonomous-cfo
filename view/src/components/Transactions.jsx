@@ -153,7 +153,7 @@ function EditPayment({transaction, close}) {
     <label>{t('Apply to','Zastosuj do')}<select value={scope} onChange={e=>setScope(e.target.value)}>
       <option value="row">{t('This row','Ten wiersz')} #{transaction.source_row}</option>
       <option value="category">{t("Category")} · {t(transaction.category)} ({state.statement_rows.filter(r=>r.category===transaction.category).length})</option>
-      <option value="type">{transaction.kind} ({count})</option>
+      <option value="type">{t(transaction.kind)} ({count})</option>
     </select></label>
     <button className="btn btn-primary" disabled={busy}>{t('Save changes','Zapisz zmiany')}</button>
     <button type="button" className="btn btn-ghost" onClick={close}>{t('Cancel','Anuluj')}</button>

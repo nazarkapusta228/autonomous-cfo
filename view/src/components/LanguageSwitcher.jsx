@@ -9,6 +9,12 @@ function Flag({ language }) {
           <path fill="#fff" d="M0 0h60v18H0z" />
           <path fill="#dc143c" d="M0 18h60v18H0z" />
         </>
+      ) : language === 'de' ? (
+        <>
+          <path fill="#000" d="M0 0h60v12H0z" />
+          <path fill="#d00" d="M0 12h60v12H0z" />
+          <path fill="#ffce00" d="M0 24h60v12H0z" />
+        </>
       ) : (
         <>
           <path fill="#25386b" d="M0 0h60v36H0z" />
@@ -33,6 +39,7 @@ export default function LanguageSwitcher() {
       {[
         ['en', 'English'],
         ['pl', 'Polski'],
+        ['de', 'Deutsch'],
       ].map(([code, name]) => (
         <button
           key={code}
