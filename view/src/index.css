@@ -31,7 +31,7 @@ button { font-family: inherit; cursor: pointer; border: none; }
 .app-shell { display: flex; height: 100vh; overflow: hidden; }
 
 .sidebar {
-  width: 280px;
+  width: 336px;
   background: var(--bg-elev);
   border-right: 1px solid var(--border);
   display: flex;
