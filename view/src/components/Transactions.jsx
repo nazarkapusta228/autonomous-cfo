@@ -1,6 +1,7 @@
 import { usePreferences } from '../context/Preferences';
 import { usePeriod } from '../context/StatementPeriod';
 import React, { useState } from 'react';
+import { faMagnifyingGlass } from '@fortawesome/free-solid-svg-icons';
 import { useApp } from '../context/AppContext';
 import BalanceChart from './BalanceChart';
 
@@ -168,6 +169,7 @@ export default function Transactions() {
   const [search, setSearch] = useState('');
   const [notice, setNotice] = useState('');
   const [editing, setEditing] = useState(null);
+  const [detailsRow, setDetailsRow] = useState(null);
   const [page, setPage] = useState(0);
   const period = usePeriod();
   const rows = period.rows.filter(
@@ -238,11 +240,10 @@ export default function Transactions() {
         <table className="table">
           <thead>
             <tr>
-              <th className="date-cell">{tr("Value date")}</th>
-              <th>{tr("Category")}</th>
-              <th>{tr("Reference")}</th>
-              <th>{tr("Counterparty")}</th>
+              <th className="date-cell">{tr("Value date", "VALUE DATE")}</th>
+              <th>{tr("Category", "CATEGORY")}</th>
               <th>{tr("Booked amount","Zaksięgowana kwota")}</th>
+              <th>{tr("Details", "DETAILS")}</th>
               <th>{tr("Edit","Edytuj")}</th>
             </tr>
           </thead>
@@ -261,16 +262,38 @@ export default function Transactions() {
                       </button>
                     )}
                   </td>
-                  <td>{t.reference}</td>
-                  <td>{t.counterparty}</td>
                   <td className={Number(t.amount) < 0 ? 'amount-neg' : 'amount-pos'}>
                     {originalMoney(t.amount, t.currency)}
                   </td>
+                  <td>
+                    <button
+                      type="button"
+                      className="btn btn-ghost transaction-details-button"
+                      aria-label={`${tr("Show details", "Pokaż szczegóły")}: ${t.reference || tr("No reference", "Brak tytułu")}`}
+                      aria-expanded={detailsRow === t.source_row}
+                      onClick={() => setDetailsRow(detailsRow === t.source_row ? null : t.source_row)}
+                    >
+                      <svg aria-hidden="true" viewBox={`0 0 ${faMagnifyingGlass.icon[0]} ${faMagnifyingGlass.icon[1]}`} className="transaction-details-icon">
+                        <path fill="currentColor" d={faMagnifyingGlass.icon[4]} />
+                      </svg>
+                      <span>{tr("Details", "Szczegóły")}</span>
+                    </button>
+                  </td>
                   <td><button className="btn btn-ghost" onClick={() => setEditing({...t, editPayment:true})}>{tr("Edit row","Edytuj wiersz")}</button></td>
                 </tr>
+                {detailsRow === t.source_row && (
+                  <tr className="transaction-details-row">
+                    <td colSpan={5}>
+                      <div className="transaction-details-content">
+                        <span><strong>{tr("Reference", "Tytuł")}</strong>{t.reference || '—'}</span>
+                        <span><strong>{tr("Counterparty", "Kontrahent")}</strong>{t.counterparty || '—'}</span>
+                      </div>
+                    </td>
+                  </tr>
+                )}
                 {editing?.source_row === t.source_row && (
                   <tr>
-                    <td colSpan={6}>
+                    <td colSpan={5}>
                       {editing.editPayment ? <EditPayment key={state.revision} transaction={t} close={()=>setEditing(null)} /> : <EditCategory
                         transaction={t}
                         close={() => setEditing(null)}
