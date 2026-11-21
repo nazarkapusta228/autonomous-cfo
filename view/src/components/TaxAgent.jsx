@@ -67,10 +67,10 @@ export default function TaxAgent() {
           <p>{tr("No identified tax payments in the current plan.")}</p>
         )}
       </section>
-      <section className="card">
+      <section className="card mb-4">
         <div className="card-title">{tr("Booked tax payments")}</div>
         <p className="card-sub"> {tr("Bank statement entries categorized as Taxes in the selected period.")} </p>
-        <label className="controls"> {tr("Booking month")}{' '}
+        <label className="booking-month"> {tr("Booking month")}{' '}
           <select value={month} onChange={(e) => setMonth(e.target.value)}>
             <option value="">{tr("All months")}</option>
             {months.map((m) => (

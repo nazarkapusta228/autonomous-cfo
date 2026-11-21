@@ -22,10 +22,14 @@ export function Preferences({ children }) {
   }, [prefs]);
   const t = (english, pl) => prefs.language === 'pl' ? (pl ?? polish[english] ?? english) : english;
   const locale = prefs.language === 'pl' ? 'pl-PL' : 'en-IE';
-  const money = (eur, compact = false) => new Intl.NumberFormat(locale, {
-    style: 'currency', currency: rate ? prefs.currency : 'EUR', ...(compact ? { notation: 'compact' } : {}),
-  }).format(Number(eur) * (rate ?? 1));
-  return <Context.Provider value={{ prefs, update, t, money, locale, exchange }}>{children}</Context.Provider>;
+  const originalMoney = (amount, currency, compact = false) => new Intl.NumberFormat(locale, {
+    style: 'currency', currency, currencyDisplay: 'narrowSymbol',
+    ...(compact ? { notation: 'compact', maximumFractionDigits: 1 } : {}),
+  }).format(Number(amount)).replace(/ /g, '\u00a0');
+  const money = (amount, compact = false) => originalMoney(
+    Number(amount) * (rate ?? 1), rate ? prefs.currency : 'EUR', compact,
+  );
+  return <Context.Provider value={{ prefs, update, t, money, originalMoney, locale, exchange }}>{children}</Context.Provider>;
 }
 
 export const usePreferences = () => useContext(Context);

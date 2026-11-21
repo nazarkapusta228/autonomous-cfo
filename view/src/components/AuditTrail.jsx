@@ -3,7 +3,7 @@ import React from 'react';
 
 const workflows = {
   tax_prepayment: 'Tax prepayment',
-  fx_forward: 'CHF forward',
+  fx_forward: 'Currency forward',
   money_market: 'Money market enquiry',
   capex: 'Equipment financing',
   investment: 'Investment decision',

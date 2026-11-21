@@ -1,5 +1,4 @@
 import { usePreferences } from '../context/Preferences';
-import { usePeriod } from '../context/StatementPeriod';
 import React from 'react';
 import { useApp } from '../context/AppContext';
 import AuditTrail from './AuditTrail';
@@ -8,7 +7,6 @@ import BalanceChart from './BalanceChart';
 export default function Dashboard() {
   const { t: tr, money: eur, prefs } = usePreferences();
   const { state } = useApp();
-  const { points } = usePeriod();
   const fc = state.analysis.forecast;
   const metrics = [
     [
@@ -38,10 +36,9 @@ export default function Dashboard() {
   ];
   return (
     <>
-      <section className="card mb-4"><div className="card-title">{tr('Account history')}</div><BalanceChart neutral points={points}/></section>
       <div className="kpi-grid">
         {metrics.map(([k, v, hint, attention]) => (
-          <div className="kpi" key={k}>
+          <div className={k === tr("Funding needed") ? 'kpi funding-needed' : 'kpi'} key={k}>
             <div className="kpi-label">{k}</div>
             <div className={attention ? 'kpi-value amount-neg' : 'kpi-value'}>{v}</div>
             <p className="metric-hint">{hint}</p>

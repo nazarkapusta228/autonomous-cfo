@@ -121,7 +121,7 @@ function EditCategory({ transaction, close, onSaved }) {
 }
 
 export default function Transactions() {
-  const { t: tr, money: eur } = usePreferences();
+  const { t: tr, money: eur, originalMoney } = usePreferences();
   const { state } = useApp();
   const [type, setType] = useState('');
   const [category, setCategory] = useState('');
@@ -171,15 +171,13 @@ export default function Transactions() {
               }}
             >
               <option value="">{tr("All categories")}</option>
-              {Object.entries(period.rows.reduce((totals, row) => { totals[row.category] = (totals[row.category] || 0) + Number(row.amount_eur); return totals; }, {}))
-                .sort()
-                .map(([k, sum]) => (
-                  <option key={k} value={k}>
-                    {tr(k)} · {eur(sum)}
-                  </option>
-                ))}
+              {[...new Set(period.rows.map(row => row.category))].sort().map(name =>
+                <option key={name} value={name}>{tr(name)}</option>)}
             </select>
           </label>
+          {category && <label>{tr('Net amount', 'Kwota netto')}
+            <output className="category-total">{eur(rows.reduce((sum, row) => sum + Math.round(Number(row.amount_eur) * 100), 0) / 100)}</output>
+          </label>}
           <label> {tr("Search reference or counterparty")} <input
               type="search"
               value={search}
@@ -227,7 +225,7 @@ export default function Transactions() {
                   <td>{t.reference}</td>
                   <td>{t.counterparty}</td>
                   <td className={Number(t.amount) < 0 ? 'amount-neg' : 'amount-pos'}>
-                    {t.amount} {t.currency}
+                    {originalMoney(t.amount, t.currency)}
                   </td>
                 </tr>
                 {editing?.source_row === t.source_row && (

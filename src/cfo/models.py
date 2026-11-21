@@ -18,7 +18,7 @@ class Transaction(BaseModel):
     counterparty: str = ""
     reference: str
     amount: Money
-    currency: Literal["EUR", "CHF"]
+    currency: Annotated[str, Field(pattern=r"^[A-Z]{3}$")]
     amount_eur: Money
 
 

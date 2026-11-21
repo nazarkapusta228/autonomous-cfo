@@ -40,12 +40,16 @@ def parse_statement(content: bytes) -> list[Transaction]:
             if not re.fullmatch(r"-?(?:\d+|\d{1,3}(?:\.\d{3})+),\d{2}", row["Amount"]):
                 raise ValueError("Expected a German amount with two decimal places")
             amount = Decimal(row["Amount"].replace(".", "").replace(",", "."))
-            currency = row["Currency"]
+            currency = row["Currency"].strip().upper()
+            if not re.fullmatch(r"[A-Z]{3}", currency):
+                raise ValueError("Expected a three-letter currency code")
             converted = amount
-            if currency == "CHF":
-                rate = re.search(r"@\s*(\d+(?:\.\d+)?)\s+EUR/CHF", row["Payment Reference"])
+            if currency != "EUR":
+                rate = re.search(
+                    rf"@\s*(\d+(?:\.\d+)?)\s+EUR/{currency}\b", row["Payment Reference"]
+                )
                 if rate is None or Decimal(rate[1]) <= 0:
-                    raise ValueError("CHF transaction has no positive EUR/CHF rate")
+                    raise ValueError(f"{currency} transaction has no positive EUR/{currency} rate")
                 converted = (amount * Decimal(rate[1])).quantize(
                     Decimal("0.01"), rounding=ROUND_HALF_UP
                 )

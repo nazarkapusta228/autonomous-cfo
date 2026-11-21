@@ -427,7 +427,7 @@ summary { cursor: pointer; color: var(--accent); }
 .header { position: relative; z-index: 5; }
 .profile-anchor { position: relative; }
 .profile-popover { position: absolute; right: 0; top: 100%; width: min(23rem, calc(100vw - 24px)); padding-top: 6px; }
-.profile-sheet { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); padding: 1rem; height: var(--profile-height); overflow: auto; }
+.profile-sheet { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); padding: 1rem; max-height: var(--profile-height); overflow: auto; }
 .profile-sheet > header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
 .profile-sheet .card { box-shadow: none; padding: .85rem; }
 .profile-sheet .controls { flex-direction: column; align-items: stretch; }
@@ -443,3 +443,15 @@ summary { cursor: pointer; color: var(--accent); }
   .sidebar-brand, .main-area > .header { height: var(--header-height); flex-shrink: 0; }
   .sidebar-brand { display: flex; flex-direction: column; justify-content: center; padding: 0 20px; }
 }
+
+.funding-needed { background: color-mix(in srgb, var(--bg-card) 91%, var(--success)); }
+.workspace-loading { margin-top: 1.25rem; }
+.table .amount-neg, .table .amount-pos, .data-strip dd, .kpi-value { white-space: nowrap; }
+.category-total { display: flex; align-items: center; min-height: 36px; padding: 0 .75rem; border: 1px solid var(--border); border-radius: 8px; color: var(--text); font-variant-numeric: tabular-nums; }
+.booking-month { display: inline-flex; align-items: center; gap: .75rem; margin: .25rem 0 1rem; }
+.booking-month select { padding: .3rem .6rem; }
+.scenario-form > .scenario-preview { margin-bottom: 1.5rem; }
+.enquiry-pair .scenario-preview { width: 100%; border-radius: 0 8px 8px 0; }
+.enquiry-pair .card { padding: clamp(1rem, 2vw, 1.75rem); }
+.rec-block > p + button, details.section + .btn { margin-top: .75rem; }
+.date-shortcuts:empty { display: none; }

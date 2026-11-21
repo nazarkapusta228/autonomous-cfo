@@ -48,7 +48,7 @@ export function AppProvider({ children }) {
       {state ? (
         children
       ) : (
-        <div className="card">
+        <div className="card workspace-loading" role="status">
           {error || tr("Loading workspace…")} {error && <button onClick={refresh}>{tr("Retry")}</button>}
         </div>
       )}

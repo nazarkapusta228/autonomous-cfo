@@ -27,7 +27,7 @@ const PAGES = {
   },
   fx: {
     title: 'Currency Exposure',
-    subtitle: 'Booked CHF payments and forward simulation',
+    subtitle: 'Foreign currency payments and forward simulation',
     component: FXAgent,
   },
   tax: {
@@ -58,7 +58,7 @@ export default function App() {
         <div className="main-area">
           <Header title={PAGES[active].title} subtitle={PAGES[active].subtitle} />
           <div className="content">
-            {['dashboard','transactions','fx','tax'].includes(active) && <PeriodPicker />}
+            {['transactions','fx','tax'].includes(active) && <PeriodPicker />}
             <Page />
           </div>
         </div>

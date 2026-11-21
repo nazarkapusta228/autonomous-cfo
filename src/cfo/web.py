@@ -99,6 +99,8 @@ class Simulation(Change):
     kind: Literal["fx_forward", "tax_prepayment", "money_market", "capex"]
     amount: Annotated[Money, Field(gt=0)]
     effective_on: date
+    currency: Annotated[str | None, Field(pattern=r"^[A-Z]{3}$")] = None
+    eur_per_unit: Annotated[Decimal | None, Field(gt=0, max_digits=12, decimal_places=6)] = None
     eur_per_chf: Annotated[Decimal | None, Field(gt=0, max_digits=12, decimal_places=6)] = None
 
 
@@ -275,16 +277,25 @@ def simulation(request: Request, body: Simulation):
         basis = body.model_dump(mode="json", exclude={"kind", "revision"}, exclude_none=True)
         basis["amount"] = format(body.amount, ".2f")
         if body.kind == "fx_forward":
-            if body.eur_per_chf is None:
-                raise ValueError("Enter an assumed EUR price per CHF")
-            basis["eur_per_chf"] = format(body.eur_per_chf.normalize(), "f")
+            currency = body.currency or "CHF"
+            rate = body.eur_per_unit or body.eur_per_chf
+            if rate is None or (body.eur_per_chf and (currency != "CHF" or body.eur_per_unit)):
+                raise ValueError("Enter one EUR exchange rate for the selected currency")
+            # Reuse the original CHF record shape so retries also match older approvals.
+            if currency == "CHF":
+                basis.pop("currency", None)
+                basis.pop("eur_per_unit", None)
+                basis["eur_per_chf"] = format(rate.normalize(), "f")
+            else:
+                basis["currency"] = currency
+                basis["eur_per_unit"] = format(rate.normalize(), "f")
             with localcontext() as context:
                 context.prec = 32
-                estimate = body.amount * body.eur_per_chf
+                estimate = body.amount * rate
                 basis["estimated_eur"] = format(
                     estimate.quantize(Decimal(".01"), rounding=ROUND_HALF_UP), "f"
                 )
-        elif body.eur_per_chf is not None:
+        elif body.eur_per_chf or body.eur_per_unit or body.currency:
             raise ValueError("An FX rate only applies to a forward")
         if body.kind == "money_market":
             rec = owned(dsn, row, "investment").recommendation

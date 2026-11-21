@@ -30,6 +30,9 @@ export default function BalanceChart({ points, action, reserve, neutral = false 
   const all = action ? balances.concat(data.map((p) => p['With action'])) : balances;
   const floor = Math.min(0, ...all);
   const ceiling = Math.max(0, Number(reserve ?? 0), ...all);
+  const axisSamples = [floor, ceiling, floor / 3, ceiling / 3, 0];
+  const fontSize = parseFloat(getComputedStyle(document.documentElement).fontSize) * 0.8125;
+  const axisWidth = Math.ceil(Math.max(...axisSamples.map(value => eur(value, true).length)) * fontSize + 18);
   const split = !neutral && high > 0 && low < 0;
   const stroke = split ? `url(#${gradient})` : !neutral && low < 0 ? 'var(--danger)' : 'var(--primary)';
   return (
@@ -71,7 +74,7 @@ export default function BalanceChart({ points, action, reserve, neutral = false 
             />
             <YAxis
               domain={[floor, ceiling || (floor === 0 ? 1 : 0)]}
-              width={72}
+              width={axisWidth}
               tickFormatter={(v) => eur(v, true)}
               stroke="var(--text-muted)"
             />
@@ -91,7 +94,6 @@ export default function BalanceChart({ points, action, reserve, neutral = false 
               y={0}
               stroke="var(--text-muted)"
               strokeWidth={2}
-              label={{ value: eur(0), position: 'insideTopRight', fill: 'var(--text-muted)', fontSize: 13 }}
             />
             {reserve != null && (
               <ReferenceLine

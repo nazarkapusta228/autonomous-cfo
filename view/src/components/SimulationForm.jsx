@@ -12,8 +12,10 @@ export default function SimulationForm({
   description,
   suggested = '',
   suggestedDate,
+  currency,
+  lastRate,
 }) {
-  const { t: tr, money: eur } = usePreferences();
+  const { t: tr, money: eur, originalMoney } = usePreferences();
   const { state, busy, submit } = useApp();
   const [enteredAmount, setAmount] = useState(null);
   const amount = enteredAmount ?? suggested;
@@ -28,17 +30,17 @@ export default function SimulationForm({
   const noSurplus = fund && assessed && free <= 0;
   const blocked = needsAssessment || noSurplus;
   const labels = {
-    fx_forward: tr("Review CHF forward"),
+    fx_forward: tr("Review CHF forward").replaceAll("CHF", currency),
     money_market: tr("Review fund enquiry"),
     capex: tr("Review equipment financing"),
     tax_prepayment: tr("Review tax prepayment"),
   };
-  const lastRate = state.fx.rates.at(-1);
-  const unit = fx ? 'CHF' : 'EUR';
-  const records = state.simulations.filter((s) => s.kind === kind);
+
+  const unit = fx ? currency : 'EUR';
+  const records = state.simulations.filter((s) => s.kind === kind && (!fx || (s.basis.currency ?? "CHF") === currency));
   async function approve() {
     const fields = { kind, amount, effective_on: date };
-    if (fx) fields.eur_per_chf = rate;
+    if (fx) Object.assign(fields, { currency, eur_per_unit: rate });
     if (await submit('simulations', fields)) setConfirm(false);
   }
   return (
@@ -69,13 +71,9 @@ export default function SimulationForm({
             value={date}
             onChange={setDate}
             min={nextDay(state.settings.as_of)}
-            shortcuts={[
-              [tr("Next day"), nextDay(state.settings.as_of)],
-              [tr("Forecast end"), state.analysis.forecast.daily_balances.at(-1).day],
-            ]}
           />
           {fx && (
-            <label> {tr("Assumed EUR per CHF")} <input
+            <label> {tr("Assumed EUR per CHF").replaceAll("CHF", currency)} <input
                 type="number"
                 required
                 step=".000001"
@@ -92,7 +90,7 @@ export default function SimulationForm({
             <strong>
               {Number(amount) > 0 && Number(rate) > 0 ? eur(Number(amount) * Number(rate)) : '—'}
             </strong>
-            <p> {tr("CHF payable × assumed EUR per CHF. A higher rate makes the same CHF bill more expensive.")} </p>
+            <p>{tr('Payment amount multiplied by the assumed rate.', 'Kwota płatności pomnożona przez zakładany kurs.')}</p>
             {lastRate && (
               <button
                 type="button"
@@ -140,7 +138,7 @@ export default function SimulationForm({
               : undefined
           }
           description={
-            amount + ' ' + unit + ' ' + tr("on") + ' ' + date + (fx ? ' ' + tr("at") + ' ' + rate + ' ' + tr("EUR per CHF.") : '.')
+            originalMoney(amount, unit) + ' ' + tr("on") + ' ' + date + (fx ? ' ' + tr("at") + ' ' + rate + ' ' + tr("EUR per CHF.").replaceAll("CHF", currency) : '.')
           }
           onApprove={approve}
           onCancel={() => setConfirm(false)}
@@ -167,11 +165,11 @@ export default function SimulationForm({
                 </td>
                 <td>{s.basis.effective_on}</td>
                 <td>
-                  {s.basis.amount} {unit}
+                  {originalMoney(s.basis.amount, unit)}
                 </td>
                 {fx && (
                   <td>
-                    {eur(s.basis.estimated_eur)} {tr("at")} {s.basis.eur_per_chf} EUR/CHF
+                    {eur(s.basis.estimated_eur)} {tr("at")} {s.basis.eur_per_unit ?? s.basis.eur_per_chf} EUR/{currency}
                   </td>
                 )}
               </tr>
