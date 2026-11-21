@@ -539,3 +539,25 @@ select:not([multiple]):not([size]) {
 .projection-result { margin:1rem 0; }
 .dashboard-kpis { grid-template-columns:repeat(3,minmax(0,1fr)); }
 @media(max-width:760px){ .cash-overview{grid-template-columns:repeat(2,minmax(0,1fr));}.cash-overview > :first-child{grid-column:1/-1}.dashboard-kpis{grid-template-columns:1fr} }
+.cash-overview {grid-template-columns:minmax(11rem,.85fr) repeat(2,minmax(0,1fr));}
+.cash-overview .data-strip {display:grid;grid-template-columns:1fr;}
+.cash-ring {grid-template-columns:auto 1fr;grid-template-rows:auto auto;align-items:end;text-align:left;justify-items:start;column-gap:.8rem;}
+.cash-ring svg {grid-row:span 2;align-self:center;width:clamp(5.4rem,7vw,8rem);height:auto;}
+.cash-ring small {align-self:start;}
+.ring-value {animation-duration:1.275s;}
+.trend-scroll tr > :first-child{text-align:left;}
+@media(max-width:980px){.cash-overview{grid-template-columns:repeat(2,minmax(0,1fr));}.cash-overview>:first-child{grid-column:1/-1;}}
+@media(max-width:580px){.cash-overview{grid-template-columns:1fr;}}
+.tax-details[open]{animation:detail-enter .18s ease-out;}
+.tax-details dl{margin:1rem 0;display:grid;gap:.6rem;}
+.tax-details dl div{display:grid;grid-template-columns:minmax(6rem, .8fr) 1.2fr;gap:.6rem;}
+.tax-details dt{color:var(--text-muted);}
+.tax-details dd{margin:0;overflow-wrap:anywhere;}
+@keyframes detail-enter{from{opacity:0;transform:translateY(8px)}}
+@media(prefers-reduced-motion:reduce){.tax-details[open]{animation:none}}
+::highlight(finance){text-decoration:underline dotted;text-decoration-color:var(--text-muted);}
+.term-tip{position:fixed;z-index:50;border:1px solid var(--border);border-radius:.6rem;padding:.8rem;width:min(18rem,calc(100vw - 1rem));background:var(--bg-card);box-shadow:var(--shadow);}
+.term-tip p{font-size:.875rem;margin-top:.3rem;}
+.glossary-list{max-height:75vh;overflow:auto;}
+.glossary-list dt{font-weight:650;margin-top:.85rem;}
+.glossary-list dd{margin:0;color:var(--text-muted);}

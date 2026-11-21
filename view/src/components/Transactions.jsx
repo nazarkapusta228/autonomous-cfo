@@ -18,7 +18,8 @@ function InvoiceReview() {
         {Object.keys(report.settled).length} {tr("settled ·")} {report.outstanding.length} {tr("outstanding")} </p>
       {Object.entries(report.settled).map(([invoice, row]) => (
         <p key={invoice}>
-          {invoice} {tr("· Settled by statement row")} {row}
+          <span>{invoice} {tr("· Settled by statement row")} {row}</span>
+          {' · '}{tr('Bank-booked amount','Kwota zaksięgowana')}{' '}{eur(state.statement_rows.find(payment=>payment.source_row===row)?.amount_eur)}
         </p>
       ))}
       {report.outstanding.map((i) => (
@@ -241,7 +242,7 @@ export default function Transactions() {
               <th>{tr("Category")}</th>
               <th>{tr("Reference")}</th>
               <th>{tr("Counterparty")}</th>
-              <th>{tr("Amount")}</th>
+              <th>{tr("Booked amount","Zaksięgowana kwota")}</th>
               <th>{tr("Edit","Edytuj")}</th>
             </tr>
           </thead>

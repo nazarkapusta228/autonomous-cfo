@@ -92,7 +92,7 @@ export default function FXAgent() {
               <tr>
                 <th>{tr("Date")}</th>
                 <th>{tr("Payment")}</th>
-                <th>{tr("Amount")}</th>
+                <th>{tr("Booked amount","Zaksięgowana kwota")}</th>
                 <th>{tr("Booking value")}</th>
               </tr>
             </thead>

@@ -2,6 +2,7 @@ import { usePreferences } from '../context/Preferences';
 import React, { useEffect, useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { api } from '../lib/api';
+import PlannedEditor from './PlannedEditor';
 import DateField from './DateField';
 import BalanceChart from './BalanceChart';
 import RecommendationCard from './RecommendationCard';
@@ -60,21 +61,24 @@ function Inputs() {
 function FlowTable({ flows, risk = false, showSource = false }) {
   const {state}=useApp();
   const { t: tr, money: eur } = usePreferences();
+  const [page,setPage]=useState(0), [edit,setEdit]=useState(null);
+  const start=showSource ? Math.min(page,Math.max(0,Math.ceil(flows.length/15)-1))*15 : 0;
+  const shown=showSource ? flows.slice(start,start+15):flows;
   const largest = flows.reduce((max, flow) => Math.max(max, Math.abs(Number(flow.amount_eur))), 0);
   return (
-    <table className="table">
+    <><table className="table">
       <thead>
         <tr>
           <th>{tr("Date")}</th>
           <th>{tr("Payment")}</th>
           <th>{tr("Category")}</th>
           {showSource && <th>{tr("Source")}</th>}
-          <th className="numeric">{tr("Amount")}</th>
+          <th className="numeric">{tr("Amount")}</th>{showSource && <th>{tr("Edit","Edytuj")}</th>}
         </tr>
       </thead>
       <tbody>
-        {flows.map((flow, i) => (
-          <tr key={i}>
+        {shown.map((flow, i) => (
+          <React.Fragment key={i}><tr>
             <td className="date-cell">{flow.date}</td>
             <td>{flow.description}</td>
             <td>{flow.category}</td>
@@ -91,10 +95,14 @@ function FlowTable({ flows, risk = false, showSource = false }) {
                 </span>
               )}
             </td>
-          </tr>
+            {showSource && <td><button className="btn btn-ghost" onClick={()=>setEdit(start+i)}>{tr("Edit","Edytuj")}</button></td>}
+          </tr>{showSource && edit===start+i && <tr><td colSpan={6}><PlannedEditor index={edit} close={()=>setEdit(null)}/></td></tr>}</React.Fragment>
         ))}
       </tbody>
-    </table>
+    </table>{showSource && flows.length>15 && <nav className="controls pagination">
+      <button className="btn btn-ghost" disabled={!start} onClick={()=>{setEdit(null);setPage(page-1)}}>{tr("Previous","Wstecz")}</button>
+      <span>{start+1}–{Math.min(start+15,flows.length)} / {flows.length}</span>
+      <button className="btn btn-ghost" disabled={start+15>=flows.length} onClick={()=>{setEdit(null);setPage(page+1)}}>{tr("Next","Dalej")}</button></nav>}</>
   );
 }
 
@@ -121,7 +129,7 @@ function ForecastChart({ revision }) {
     {f ? <>
       <p className="card-sub">{f.as_of} – {f.daily_balances.at(-1).day} · {t('Reserve')} {money(f.reserve)} ·
         {' '}{t('Lowest projected cash')} {money(f.minimum_balance)} ({f.minimum_on})</p>
-      <BalanceChart neutral points={[{ day: f.as_of, balance: f.opening_balance }, ...f.daily_balances]} reserve={f.reserve}/>
+      <BalanceChart forecast neutral points={[{ day: f.as_of, balance: f.opening_balance }, ...f.daily_balances]} reserve={f.reserve}/>
     </> : current?.failed ? <p role="alert">{t('Forecast unavailable.', 'Prognoza niedostępna.')} <button className="btn btn-ghost"
       onClick={() => { setResult(null); setAttempt(previous => previous + 1); }}>{t('Retry')}</button></p>
       : <p role="status">{t('Loading forecast…', 'Wczytywanie prognozy…')}</p>}
@@ -209,7 +217,7 @@ export default function LiquidityAgent() {
         <div className="card-title">{tr("Planned payments and income")}</div>
         <p className="card-sub"> {state.uses_statement_projection ? tr("The baseline repeats known payments from the last four weeks every 28 days. Outstanding invoices are added separately.", "Prognoza powtarza co 28 dni operacje z ostatnich czterech tygodni. Nierozliczone faktury są doliczane osobno.") : tr("Expected movements in this forecast come from the cash flow plan CSV and eligible outstanding invoices.")} </p>
         {a.plan.length ? (
-          <FlowTable flows={a.plan} showSource />
+          <FlowTable key={state.revision} flows={a.plan} showSource />
         ) : (
           <p>{tr("No planned entries within this forecast period.")}</p>
         )}

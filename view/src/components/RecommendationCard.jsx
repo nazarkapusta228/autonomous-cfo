@@ -2,6 +2,7 @@ import { usePreferences } from '../context/Preferences';
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { nextDay } from '../lib/api';
+import CreditOptions from "./CreditOptions";
 import DateField from './DateField';
 import BalanceChart from './BalanceChart';
 
@@ -62,7 +63,7 @@ function Comparison({ role, proposal, fc }) {
           <p> {tr("Compare the baseline with the balance after funding or investing, including settlement and assumed interest. Principal outstanding at horizon end:")}{' '}
             {eur(comparison.outstanding_principal)}.
           </p>
-          <BalanceChart
+          <BalanceChart forecast
             neutral
             points={comparison.baseline}
             action={comparison.with_action}
@@ -176,6 +177,7 @@ export default function RecommendationCard({ role }) {
           </tbody>
         </table>
       )}
+      {p.action==='propose_credit' && <CreditOptions key={state.revision} forecast={state.analysis.forecast} proposal={p}/>}
       <h4>{tr("Risks to consider")}</h4>
       <ul>
         {p.risks.map((r) => (
@@ -186,6 +188,7 @@ export default function RecommendationCard({ role }) {
         {tr(saved.status.replace('_', ' '))}{' '}
         {saved.application_id && ' · ' + tr('Request #') + saved.application_id}
       </div>
+      {saved.status==='simulated' && <p>{tr('Owner-approved simulation. Bank execution has not been reported.','Symulacja zatwierdzona przez właściciela. Brak potwierdzenia wykonania przez bank.')}</p>}
       {saved.status === 'pending' && (
         <div className="modal-actions">
           {['reject', 'approve'].map((c) => (

@@ -30,7 +30,7 @@ def assess(
     if analysis.reconciliation.ambiguous:
         raise ValueError("Resolve ambiguous invoice payments before asking for a recommendation")
     dsn = database_dsn(settings)
-    context = analysis.model_dump(mode="json", exclude={"forecast"})
+    context = analysis.model_dump(mode="json", exclude={"forecast", "plan_keys"})
     context["role"] = role
     context["model"] = settings.llm_model
     saved = find_by_request_id(dsn, request_id)

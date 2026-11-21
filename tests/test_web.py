@@ -210,3 +210,26 @@ def test_data_files_edits_exports_and_deletion(postgres_url, monkeypatch):
             ).fetchone()[0]
             == 0
         )
+
+
+def test_planned_payment_edit_preserves_bookings_and_checks_revision(postgres_url, monkeypatch):
+    monkeypatch.setenv("DATABASE_URL", postgres_url)
+    owner = client()
+    before = state(owner)
+    first = before["analysis"]["plan"][0]
+    payload = {
+        **first,
+        "revision": before["revision"],
+        "key": before["plan_keys"][0],
+        "amount_eur": "-123.45",
+        "description": "Revised budget",
+    }
+    payload.pop("invoice_id", None)
+    saved = owner.post("/api/plan/edit", json=payload)
+    assert saved.is_success, saved.text
+    after = state(owner)
+    revised = after["analysis"]["plan"][after["plan_keys"].index(payload["key"])]
+    assert revised["description"] == "Revised budget" and revised["amount_eur"] == "-123.45"
+    assert before["history"] == after["history"]
+    assert before["analysis"]["forecast"] != after["analysis"]["forecast"]
+    assert owner.post("/api/plan/edit", json=payload).status_code == 409

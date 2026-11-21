@@ -24,11 +24,14 @@ from cfo import accounts
 from cfo import data_files as files
 from cfo import workspace as ws
 from cfo.agent_types import Role
+from cfo.analysis import keyed_flows
 from cfo.config import Settings
 from cfo.db import import_statement
+from cfo.forecast_tools import credit_path
+from cfo.ingestion import parse_cash_flow_plan
 from cfo.ledger import parse_invoices, save_category, save_invoice_decision
 from cfo.llm import ModelError
-from cfo.models import Money
+from cfo.models import Money, PlannedCashFlow
 from cfo.scenarios import SettlementTerms, compare_scenarios
 from cfo.service import assess, database_dsn
 from cfo.workflow import Decision, decide, find_by_request_id
@@ -392,6 +395,36 @@ def download_file(
     )
 
 
+class PlannedEdit(Change):
+    key: str = Field(max_length=100)
+    date: date
+    amount_eur: Money
+    description: str = Field(min_length=1, max_length=1000)
+    category: str = Field(min_length=1, max_length=100)
+
+
+@app.post("/api/plan/edit")
+def edit_planned(request: Request, body: PlannedEdit):
+    with current(request, body.revision) as (conn, dsn, row):
+        analysis = ws.analyse(dsn, row)
+        if body.key not in analysis.plan_keys or body.date <= analysis.forecast.as_of:
+            raise ValueError("Select a current forecast entry and a date after the cutoff")
+        changes = body.model_dump(mode="json", exclude={"key", "revision"})
+        current_flow = analysis.plan[analysis.plan_keys.index(body.key)]
+        if row["plan"] and not current_flow.invoice_id:
+            updated = []
+            for key, flow in keyed_flows(parse_cash_flow_plan(row["plan"])):
+                if key == body.key:
+                    flow = PlannedCashFlow.model_validate(flow.model_dump() | changes)
+                updated.append(flow.model_dump(mode="json"))
+            row["plan"] = files.encode(files.FIELDS["plan"], updated, ",")
+        else:
+            row["planned_edits"][body.key] = changes
+        ws.analyse(dsn, row)
+        ws.advance(conn, row)
+    return {"saved": True}
+
+
 @app.post("/api/categories")
 def category(request: Request, body: Category):
     with current(request, body.revision) as (_, dsn, row):
@@ -457,6 +490,20 @@ def comparison(request: Request, role: Role, body: Terms):
     with current(request, body.revision) as (_, dsn, row):
         rec = owned(dsn, row, role)
         return compare_scenarios(rec.forecast, rec.recommendation, body.terms)
+
+
+class CreditScenario(Change):
+    product: Literal["overdraft", "credit_line"]
+    annual_rate: Decimal = Field(ge=0, le=100, decimal_places=2)
+
+
+@app.post("/api/agents/liquidity/credit-scenario")
+def simulate_credit(request: Request, body: CreditScenario):
+    with current(request, body.revision) as (_, dsn, row):
+        rec = owned(dsn, row, "liquidity")
+        if rec.recommendation.action != "propose_credit":
+            raise ValueError("A current credit recommendation is required")
+        return credit_path(rec.forecast, rec.recommendation, body.product, body.annual_rate)
 
 
 @app.post("/api/simulations")

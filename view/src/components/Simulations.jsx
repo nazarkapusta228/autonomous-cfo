@@ -116,7 +116,7 @@ function OperatingScenario({ analysis }) {
               </dd>
             </div>
           </dl>
-          <BalanceChart
+          <BalanceChart forecast
             points={forecast.daily_balances}
             actionLabel={t('Scenario balance','Saldo scenariusza')}
             action={result}

@@ -3,6 +3,7 @@ import { X } from 'lucide-react';
 import { usePreferences } from '../context/Preferences';
 import { Profile,useAccount } from './Account';
 
+import Glossary from "./Glossary";
 import LanguageSwitcher from './LanguageSwitcher';
 
 export default function Header({ title, subtitle }) {
@@ -49,7 +50,7 @@ export default function Header({ title, subtitle }) {
   return <header className="header">
     <div><h2>{t(title)}</h2><div className="subtitle">{t(subtitle)}</div></div>
     <div className="header-actions">
-      <LanguageSwitcher />
+      <Glossary/><LanguageSwitcher />
       <div className="profile-anchor" ref={panel}
         onPointerEnter={e => { if (e.pointerType === 'mouse') setMode(previous => previous || 'hover'); }}
         onFocusCapture={e=>{if(e.target.closest('.profile-sheet')) setMode('pinned');}}

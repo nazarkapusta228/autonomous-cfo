@@ -24,8 +24,8 @@ export default function Dashboard() {
     ],
     [
       tr("Funding needed"),
-      eur(fc.funding_needed),
-      tr('Forecast shortfall against the reserve of', 'Prognozowany niedobór względem rezerwy') + ' ' + eur(fc.reserve) + '.',
+      Number(fc.funding_needed)>0 ? eur(fc.funding_needed) : tr('No shortfall','Brak niedoboru'),
+      !Number(fc.funding_needed) ? tr('Minimum headroom above reserve','Minimalna nadwyżka nad rezerwą')+' · '+eur(Math.min(Number(fc.minimum_balance),Number(fc.opening_balance))-Number(fc.reserve)) : tr('Forecast shortfall against the reserve of', 'Prognozowany niedobór względem rezerwy') + ' ' + eur(fc.reserve) + '.',
       false,
     ],
   ];
@@ -44,7 +44,7 @@ export default function Dashboard() {
       <section className="card mb-4">
         <div className="card-title">{tr("Cash balance forecast")}</div>
         <p className="card-sub"> {tr("Starting at the cut-off balance, each day adds expected receipts and subtracts planned payments. The dashed line marks your safety reserve.")} </p>
-        <BalanceChart
+        <BalanceChart forecast
           neutral
           points={[{ day: fc.as_of, balance: fc.opening_balance }, ...fc.daily_balances]}
           reserve={fc.reserve}

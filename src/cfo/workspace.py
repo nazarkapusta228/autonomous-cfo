@@ -15,6 +15,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from cfo.analysis import prepare_analysis
 from cfo.db import import_statement
 from cfo.finance import daily_balances
+from cfo.forecast_tools import daily_error_scale
 from cfo.ingestion import parse_statement
 from cfo.ledger import categorize, load_categories, load_invoice_decisions, parse_invoices
 from cfo.models import Money
@@ -86,7 +87,7 @@ def advance(conn, row):
     new_revision(conn, row["id"], revision)
     conn.execute(
         "UPDATE web_workspaces SET revision=%s,import_id=%s,statement=%s,plan=%s,"
-        "invoices=%s,settings=%s WHERE id=%s",
+        "invoices=%s,settings=%s,planned_edits=%s WHERE id=%s",
         (
             revision,
             row["import_id"],
@@ -94,6 +95,7 @@ def advance(conn, row):
             row["plan"],
             row["invoices"],
             Jsonb(row["settings"]),
+            Jsonb(row["planned_edits"]),
             row["id"],
         ),
     )
@@ -111,6 +113,7 @@ def analyse(dsn, row):
         row["plan"],
         invoices=row["invoices"],
         confirmed=matches,
+        planned_edits=row["planned_edits"],
         **settings.model_dump(),
     )
 
@@ -195,10 +198,12 @@ def snapshot(conn, dsn, row):
             for f in ("statement", "plan", "invoices")
         },
         statement_info=statement_info,
+        plan_keys=analysis.plan_keys,
+        daily_error_scale=daily_error_scale(visible, cutoff),
         uses_statement_projection=not row["plan"],
         revision=row["revision"],
         settings=row["settings"],
-        analysis=analysis.model_dump(mode="json"),
+        analysis=analysis.model_dump(mode="json", exclude={"plan_keys"}),
         statement_rows=records,
         transactions=[r for r in records if r["source_row"] in visible_rows],
         fx=fx,

@@ -1,10 +1,11 @@
 """Prepare the same dated analysis for both agents and the dashboard."""
 
+from collections import Counter
 from datetime import date, timedelta
 from decimal import Decimal
 from hashlib import sha256
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 from cfo.agent_types import ReceiptDelay
 from cfo.finance import balance_as_of, build_liquidity_forecast
@@ -19,6 +20,7 @@ class Analysis(BaseModel):
     statement_sha256: str
     starting_balance: Money
     forecast: LiquidityForecast
+    plan_keys: list[str] = Field(default_factory=list)
     plan: list[PlannedCashFlow]
     reconciliation: Reconciliation
     payments_at_risk: list[PlannedCashFlow]
@@ -47,6 +49,15 @@ def statement_projection(transactions, as_of, horizon_days):
     return flows
 
 
+def keyed_flows(flows):
+    occurrences = Counter()
+    for flow in flows:
+        fingerprint = sha256(flow.model_dump_json().encode()).hexdigest()
+        key = f"{fingerprint}-{occurrences[fingerprint]}"
+        occurrences[fingerprint] += 1
+        yield key, flow
+
+
 def prepare_analysis(
     statement: bytes,
     plan: bytes,
@@ -56,6 +67,7 @@ def prepare_analysis(
     horizon_days: int = 45,
     reserve: Decimal = Decimal("0.00"),
     invoices: bytes | None = None,
+    planned_edits: dict | None = None,
     confirmed: dict[str, int | None] | None = None,
 ) -> Analysis:
     """Link plan rows by invoice_id; unlinked rows are independent assumptions."""
@@ -80,6 +92,11 @@ def prepare_analysis(
             raise ValueError(f"Linked amount differs from invoice {row.invoice_id}")
         linked.add(row.invoice_id)
     flows = [row for row in assumptions if row.invoice_id is None] + reconciliation.planned_flows
+    keyed = []
+    for key, flow in keyed_flows(flows):
+        changes = (planned_edits or {}).get(key, {})
+        keyed.append((key, PlannedCashFlow.model_validate(flow.model_dump() | changes)))
+    flows = [f for _, f in keyed]
     forecast = build_liquidity_forecast(
         as_of=as_of,
         opening_balance=balance_as_of(transactions, starting_balance, as_of),
@@ -87,27 +104,30 @@ def prepare_analysis(
         horizon_days=horizon_days,
         reserve=reserve,
     )
-    flows = sorted(
-        (flow for flow in flows if as_of < flow.date <= forecast.daily_balances[-1].day),
-        key=lambda flow: flow.date,
+    visible = sorted(
+        ((key, f) for key, f in keyed if as_of < f.date <= forecast.daily_balances[-1].day),
+        key=lambda pair: pair[1].date,
     )
+    flows = [f for _, f in visible]
     # With daily closing balances, same-day payments share one risk date.
     short_days = {point.day for point in forecast.daily_balances if point.balance < reserve}
     risky = [flow for flow in flows if flow.amount_eur < 0 and flow.date in short_days]
     delays = []
     end = forecast.daily_balances[-1].day
-    for receipt in reconciliation.planned_flows:
-        if receipt.amount_eur <= 0:
+    for receipt in flows:
+        if not receipt.invoice_id or receipt.amount_eur <= 0:
             continue
         invoice = by_id[receipt.invoice_id]
         if receipt.date <= invoice.due_on or invoice.due_on > end:
             continue
-        pattern = reconciliation.payment_patterns[invoice.counterparty]
+        pattern = reconciliation.payment_patterns.get(invoice.counterparty)
+        if not pattern or not pattern.late_payments:
+            continue
         delays.append(
             ReceiptDelay(
                 invoice_id=invoice.invoice_id,
                 counterparty=invoice.counterparty,
-                amount_eur=invoice.amount_eur,
+                amount_eur=receipt.amount_eur,
                 due_on=invoice.due_on,
                 expected_on=receipt.date,
                 payments=pattern.payments,
@@ -119,6 +139,7 @@ def prepare_analysis(
         starting_balance=starting_balance,
         forecast=forecast,
         plan=flows,
+        plan_keys=[key for key, _ in visible],
         reconciliation=reconciliation,
         receipt_delays=delays,
         payments_at_risk=[flow for flow in risky if flow.date == risky[0].date],

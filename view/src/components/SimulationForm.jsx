@@ -151,7 +151,7 @@ export default function SimulationForm({
           <caption>{tr("Approved simulations for this forecast")}</caption>
           <thead>
             <tr>
-              <th>{tr("Record")}</th>
+              <th>{tr("Simulation ID","Numer symulacji")}</th>
               <th>{tr("Effective date")}</th>
               <th>{tr("Amount (")}{unit})</th>
               {fx && <th>{tr("Estimated payment")}</th>}

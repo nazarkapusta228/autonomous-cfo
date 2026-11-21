@@ -1,4 +1,5 @@
 import { usePreferences } from '../context/Preferences';
+import {useApp} from '../context/AppContext';
 import React, { useId } from 'react';
 import {
   CartesianGrid,
@@ -14,11 +15,20 @@ import {
 } from 'recharts';
 
 
-export default function BalanceChart({ points, action, actionLabel, reserve, neutral = false }) {
+export default function BalanceChart({ points, action, actionLabel, reserve, neutral = false, forecast = false }) {
   const { t: tr, money: eur } = usePreferences();
   const gradient = useId().replace(/:/g, '');
+  const {state}=useApp();
+  const scale=forecast && state.daily_error_scale;
+  const bounds=(p)=> {
+    if(!scale) return {};
+    const days=Math.max(0,(Date.parse(p.day)-Date.parse(state.settings.as_of))/86400000);
+    const width=1.644853627 * scale * Math.sqrt(days);
+    return {lower:Number(p.balance)-width,upper:Number(p.balance)+width};
+  };
   const data = points.map((p, i) => ({
     day: p.day,
+    ...bounds(p),
     Balance: Number(p.balance),
     ...(action ? { 'With action': Number(action[i].balance) } : {}),
   }));
@@ -28,6 +38,7 @@ export default function BalanceChart({ points, action, actionLabel, reserve, neu
   const high = Math.max(...balances);
   const firstNegative = data.find((p) => p.Balance < 0);
   const all = action ? balances.concat(data.map((p) => p['With action'])) : balances;
+  if(scale) { for(const p of data) all.push(p.lower,p.upper); }
   const floor = Math.min(0, ...all);
   const ceiling = Math.max(0, Number(reserve ?? 0), ...all);
   const axisSamples = [floor, ceiling, floor / 3, ceiling / 3, 0];
@@ -49,6 +60,7 @@ export default function BalanceChart({ points, action, actionLabel, reserve, neu
             <i className="key-reserve" /> {tr("Reserve")} {eur(reserve)}
           </span>
         )}
+        {forecast && <small>{scale ? tr('Dashed limits: approximate 90% baseline prediction interval, assuming independent daily errors.', 'Linie przerywane: przybliżony 90% przedział predykcji bazowej przy niezależnych błędach dziennych.') : tr('Insufficient variability or history for a prediction interval.', 'Za mało historii lub zmienności do obliczenia przedziału predykcji.')}</small>}
         {firstNegative && (
           <strong className={neutral ? 'chart-alert neutral-alert' : 'chart-alert'}> {tr("First below zero:")} {firstNegative.day} ({eur(firstNegative.Balance)})
           </strong>
@@ -111,6 +123,7 @@ export default function BalanceChart({ points, action, actionLabel, reserve, neu
               activeDot={{ r: 5, fill: 'var(--text)' }}
               isAnimationActive={false}
             />
+            {scale && ['upper','lower'].map(k=><Line key={k} dataKey={k} name={k==='upper'?tr('Upper 90% limit','Górna granica 90%'):tr('Lower 90% limit','Dolna granica 90%')} stroke="var(--text-muted)" strokeWidth={1.25} strokeDasharray="3 5" dot={false} activeDot={false} isAnimationActive={false}/>)}
             {action && (
               <Line
                 dataKey="With action" name={actionLabel || tr("With action")}

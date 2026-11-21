@@ -54,3 +54,23 @@ def test_credit_counterfactual_repayment_is_not_operating_income():
     assert adjusted[date(2025, 6, 26)] == Decimal("59.18")
     assert adjusted[date(2025, 7, 15)] == forecast.daily_balances[-1].balance - Decimal(100)
     assert preview.outstanding_principal == 0
+
+
+def test_credit_draws_on_cutoff_and_repays_from_surplus():
+    from types import SimpleNamespace
+
+    from cfo.forecast_tools import credit_path
+    from cfo.models import ForecastPoint
+
+    day = date(2025, 6, 1)
+    forecast = SimpleNamespace(
+        as_of=day,
+        opening_balance=Decimal("-100"),
+        reserve=Decimal(0),
+        daily_balances=[ForecastPoint(day=date(2025, 6, 2), balance=Decimal("100"))],
+    )
+    proposal = SimpleNamespace(execute_on=day, amount=Decimal("150"))
+    for product, peak, cost in [("overdraft", "100", ".10"), ("credit_line", "150", ".15")]:
+        result = credit_path(forecast, proposal, product, Decimal("36.50"))
+        assert result["peak"] == Decimal(peak) and result["interest"] == Decimal(cost)
+        assert result["days_to_close"] == 1 and result["outstanding"] == 0

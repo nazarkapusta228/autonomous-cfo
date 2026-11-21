@@ -3,6 +3,8 @@ import { usePeriod } from '../context/StatementPeriod';
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
 
+import {InspectTax, TaxDetails} from "./TaxDetails";
+
 export default function TaxAgent() {
   const { t: tr, money: eur } = usePreferences();
   const { state } = useApp();
@@ -11,6 +13,7 @@ export default function TaxAgent() {
   const planned = state.analysis.plan.filter((p) =>
     /tax|steuer/i.test(p.category + ' ' + p.description),
   );
+  const [detail,setDetail]=useState(null);
   const [month, setMonth] = useState('');
   const months = [...new Set(rows.map((t) => t.value_on.slice(0, 7)))].sort().reverse();
   const filtered = rows.filter((t) => !month || t.value_on.startsWith(month));
@@ -47,7 +50,7 @@ export default function TaxAgent() {
               <tr>
                 <th>{tr("Date")}</th>
                 <th>{tr("Planned payment")}</th>
-                <th>{tr("Amount")}</th>
+                <th>{tr("Planned amount","Planowana kwota")}</th><th>{tr("Details","Szczegóły")}</th>
               </tr>
             </thead>
             <tbody>
@@ -57,7 +60,7 @@ export default function TaxAgent() {
                   <td>{p.description}</td>
                   <td className={Number(p.amount_eur) < 0 ? 'amount-neg' : 'amount-pos'}>
                     {eur(p.amount_eur)}
-                  </td>
+                  </td><td><InspectTax label={tr("View details","Pokaż szczegóły")+" · "+p.date} onClick={()=>setDetail({row:p,booked:false})}/></td>
                 </tr>
               ))}
             </tbody>
@@ -83,7 +86,7 @@ export default function TaxAgent() {
               <tr>
                 <th>{tr("Date")}</th>
                 <th>{tr("Reference")}</th>
-                <th>{tr("Amount")}</th>
+                <th>{tr("Booked amount","Zaksięgowana kwota")}</th><th>{tr("Details","Szczegóły")}</th>
               </tr>
             </thead>
             <tbody>
@@ -93,7 +96,7 @@ export default function TaxAgent() {
                   <td>{t.reference}</td>
                   <td className={Number(t.amount_eur) < 0 ? 'amount-neg' : 'amount-pos'}>
                     {eur(t.amount_eur)}
-                  </td>
+                  </td><td><InspectTax label={tr("View details","Pokaż szczegóły")+" · "+t.value_on} onClick={()=>setDetail({row:t,booked:true})}/></td>
                 </tr>
               ))}
             </tbody>
@@ -102,6 +105,7 @@ export default function TaxAgent() {
           <p>{tr("No payments categorized as Taxes.")}</p>
         )}
       </section>
+    {detail && <TaxDetails {...detail} close={()=>setDetail(null)}/>}
     </>
   );
 }

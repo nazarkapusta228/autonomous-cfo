@@ -38,7 +38,7 @@ export default function AuditTrail({ events }) {
           <article key={key}>
             <header>
               <strong>{tr(workflows[latest.kind] || latest.kind)}</strong>
-              <small> {tr("Record #")}{latest.number} · {new Date(latest.occurred_at).toLocaleDateString(locale)}
+              <small> {(["liquidity","investment"].includes(latest.kind)?tr("Agent decision ID #","Numer decyzji agenta #"):tr("Simulation ID #","Numer symulacji #"))}{latest.number} · {new Date(latest.occurred_at).toLocaleDateString(locale)}
               </small>
             </header>
             <ol>
