@@ -15,7 +15,7 @@ import {
 } from 'recharts';
 
 
-export default function BalanceChart({ points, action, actionLabel, reserve, centered = false, neutral = false, forecast = false }) {
+export default function BalanceChart({ points, seriesLabel, action, actionLabel, reserve, centered = false, neutral = false, forecast = false }) {
   const { t: tr, money: eur } = usePreferences();
   const gradient = useId().replace(/:/g, '');
   const {state}=useApp();
@@ -36,7 +36,7 @@ export default function BalanceChart({ points, action, actionLabel, reserve, cen
   const balances = data.map((p) => p.Balance);
   const low = Math.min(...balances);
   const high = Math.max(...balances);
-  const firstNegative = data.find((p) => p.Balance < 0);
+  const firstNegative = !seriesLabel && data.find((p) => p.Balance < 0);
   const all = action ? balances.concat(data.map((p) => p['With action'])) : balances;
   if(scale) { for(const p of data) all.push(p.lower,p.upper); }
   const floor = Math.min(0, ...all);
@@ -50,7 +50,7 @@ export default function BalanceChart({ points, action, actionLabel, reserve, cen
     <figure className="balance-figure">
       <figcaption className="chart-key">
         <span>
-          <i className="key-balance" /> {tr("Balance")} </span>
+          <i className="key-balance" /> {seriesLabel || tr("Balance")} </span>
         {action && (
           <span>
             <i className="key-action" /> {actionLabel || tr("With action")} </span>
@@ -116,7 +116,7 @@ export default function BalanceChart({ points, action, actionLabel, reserve, cen
               />
             )}
             <Line
-              dataKey="Balance" name={tr("Balance")}
+              dataKey="Balance" name={seriesLabel || tr("Balance")}
               stroke={stroke}
               strokeWidth={3}
               dot={data.length === 1}

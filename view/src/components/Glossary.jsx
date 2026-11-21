@@ -1,3 +1,4 @@
+import { X } from 'lucide-react';
 import React, { useEffect, useRef, useState } from 'react';
 import { terms } from '../lib/glossary';
 import { usePreferences } from '../context/Preferences';
@@ -151,13 +152,7 @@ export default function Glossary() {
           }}
           aria-label={t('Glossary', 'Słownik')}
         >
-          <button
-            className="btn btn-ghost"
-            onClick={() => dialog.current.close()}
-          >
-            {t('Close')}
-          </button>
-          <dl>
+          <dl tabIndex={-1} autoFocus>
             {terms.map((row) => (
               <div key={row[0]}>
                 <dt>{t(row[0], row[1]).split('|')[0]}</dt>
@@ -165,6 +160,10 @@ export default function Glossary() {
               </div>
             ))}
           </dl>
+          <button className="btn btn-ghost glossary-dismiss" aria-label={t('Close')}
+            onClick={() => dialog.current.close()}>
+            <X size={20} aria-hidden="true" />
+          </button>
         </dialog>
       )}
     </div>

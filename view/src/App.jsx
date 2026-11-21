@@ -42,7 +42,7 @@ export default function App() {
         <Sidebar active={active} onNavigate={setActive} />
         <div className="main-area">
           <Header title={PAGES[active].title} subtitle={PAGES[active].subtitle} />
-          <div className="content">
+          <div key={active} className="content">
             {active === 'transactions' && <PeriodPicker />}
             <Page />
           </div>

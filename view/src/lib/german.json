@@ -1,4 +1,7 @@
 {
+  "Days meeting cash reserve": "Tage mit gedeckter Reserve",
+  "Share of forecast days ending at or above your cash reserve.": "Anteil der Prognosetage, an denen der Endsaldo die Liquiditätsreserve deckt.",
+  "Forecast cash difference": "Prognostizierte Saldoänderung",
   "Simulations": "Simulationen",
   "Compare cash flow scenarios": "Cashflow-Szenarien vergleichen",
   "Data": "Daten",

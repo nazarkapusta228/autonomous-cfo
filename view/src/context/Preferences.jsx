@@ -4,7 +4,7 @@ import polish from '../lib/polish.json';
 import german from '../lib/german.json';
 
 const Context = createContext(null);
-const defaults = { language: 'en', theme: 'dark', size: 'medium', currency: 'EUR', low: true, change: true, changeThreshold: 20, approval: true };
+const defaults = { language: 'en', theme: 'dark', size: 'medium', currency: 'EUR', low: true, change: true, changeThreshold: 20 };
 const key = 'cfo.preferences.v1';
 
 export function Preferences({ children }) {

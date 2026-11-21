@@ -1,3 +1,10 @@
+@font-face {
+  font-family: 'Sora';
+  src: url('/fonts/sora.ttf') format('truetype');
+  font-weight: 100 800;
+  font-display: swap;
+}
+
 :root {
   --bg: #141916;
   --bg-elev: #1b211d;
@@ -19,7 +26,7 @@
 
 html, body, #root {
   height: 100%;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+  font-family: 'Sora', sans-serif;
   background: var(--bg);
   color: var(--text);
   -webkit-font-smoothing: antialiased;
@@ -315,7 +322,7 @@ button.transaction-category:hover { text-decoration-style: solid; }
 .mb-4 { margin-bottom: 16px; }
 .mb-6 { margin-bottom: 24px; }
 .text-muted { color: var(--text-muted); }
-.mono { font-family: 'SF Mono', Menlo, monospace; font-size: 0.75rem; }
+.mono { font-family: inherit; font-variant-numeric: tabular-nums; font-size: 0.75rem; }
 h1,h2,h3,h4 { letter-spacing: -.01em; }
 
 select, input[type="range"] {
@@ -583,3 +590,24 @@ select:not([multiple]):not([size]) {
 .threshold-value { display: flex; gap: .2rem; align-items: center; justify-content: center; height: 2.25rem; border: 1px solid var(--border); border-radius: 6px; background: var(--bg-elev); color: var(--text-muted); }
 .threshold-value input { appearance: textfield; width: 2.2ch; padding: 0; border: 0; outline: none; background: transparent; color: var(--text); text-align: right; font: inherit; font-variant-numeric: tabular-nums; }
 .threshold-value input::-webkit-inner-spin-button, .threshold-value input::-webkit-outer-spin-button { appearance: none; }
+
+input, select, textarea { font-family: inherit; }
+.sidebar-brand { display: flex; flex-direction: row; align-items: center; justify-content: flex-start; gap: .7rem; }
+.sidebar-brand img { width: 2.9rem; height: 2.9rem; object-fit: contain; }
+.sidebar-brand h1 { font-size: 1.4rem; line-height: 1.15; }
+.nav-item { transition: background-color .2s ease, box-shadow .2s ease, color .2s ease; }
+.nav-item:hover, .nav-item:focus-visible {
+  background: color-mix(in srgb, var(--primary) 23%, var(--bg-elev));
+  box-shadow: inset 3px 0 var(--primary);
+}
+@media (prefers-reduced-motion: no-preference) {
+  .content { animation: page-enter .22s ease-out; }
+  @keyframes page-enter { from { opacity: .55; } to { opacity: 1; } }
+}
+@media (prefers-reduced-motion: reduce) { .nav-item { transition: none; } }
+.operating-scenario > h3, .operating-scenario > .card-sub { text-align: center; }
+.operating-scenario .data-tools { justify-content: center; }
+.trend-card { padding-bottom: .75rem; }
+.trend-toggle { margin-top: .6rem; }
+.glossary-dismiss { display: flex; margin-inline-start: auto; }
+.transactions-table tr > :nth-child(n+4) { width: 1%; white-space: nowrap; text-align: right; padding-inline: .3rem; }

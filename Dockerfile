@@ -4,6 +4,7 @@ COPY view/package*.json ./
 RUN npm ci --no-audit --no-fund
 COPY view/index.html view/vite.config.js ./
 COPY view/src ./src
+COPY view/public ./public
 RUN npm run build
 
 FROM python:3.12-slim

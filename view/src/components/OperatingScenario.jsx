@@ -45,7 +45,7 @@ export default function OperatingScenario({ analysis }) {
         (operatingCost(p.category) || operatingCost(p.description)) === kind,
     ).length;
   return (
-    <section className="card mb-4">
+    <section className="card mb-4 operating-scenario">
       <h3>
         {t('Operating cash scenario', 'Scenariusz przepływów operacyjnych')}
       </h3>

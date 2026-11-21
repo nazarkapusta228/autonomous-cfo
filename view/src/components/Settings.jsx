@@ -66,7 +66,6 @@ export default function Settings() {
       </fieldset>
       {[
         ['low', t('Forecast balance reaches the reserve or falls below zero', 'Prognozowane saldo osiąga poziom rezerwy lub spada poniżej zera')],
-        ['approval', t('An agent decision needs approval', 'Decyzja agenta wymaga zatwierdzenia')],
       ].map(([key,label]) => <label className="setting-row" key={key}>{label}<input type="checkbox" role="switch" checked={prefs[key]} onChange={e => update({[key]: e.target.checked})}/></label>)}
     </section>
   </div>;

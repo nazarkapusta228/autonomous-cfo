@@ -1,10 +1,10 @@
 import { usePreferences } from '../context/Preferences';
 import React from 'react';
-import { Database, Settings, LayoutDashboard, Droplets, ListOrdered } from 'lucide-react';
+import { Database, Settings, LayoutDashboard, Rocket, ListOrdered } from 'lucide-react';
 
 const NAV = [
   { key: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { key: 'liquidity', label: 'Liquidity Agent', icon: Droplets },
+  { key: 'liquidity', label: 'Liquidity Agent', icon: Rocket },
   { key: 'transactions', label: 'Transactions', icon: ListOrdered },
   { key: 'data', label: 'Data', icon: Database },
   { key: 'settings', label: 'Settings', icon: Settings },
@@ -15,8 +15,9 @@ export default function Sidebar({ active, onNavigate }) {
   return (
     <aside className="sidebar">
       <div className="sidebar-brand">
-        <h1>Autonomous CFO</h1>
-        <p>RedHat Collabothon 2026</p>
+        <img src="/cfo-mark.png" alt="" width="46" height="46" />
+        <div><h1>Autonomous CFO</h1>
+        <p>RedHat Collabothon 2026</p></div>
       </div>
       <nav className="sidebar-nav">
         {NAV.map((n) => {

@@ -263,7 +263,7 @@ export default function Transactions() {
         <p className="card-sub">
           {rows.length} {tr("matching payments in the selected statement period.")} </p>
         <p role="status">{notice}</p>
-        <table className="table">
+        <table className="table transactions-table">
           <thead>
             <tr>
               <th className="date-cell">{tr("Value date", "VALUE DATE")}</th>
