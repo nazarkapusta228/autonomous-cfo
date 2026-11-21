@@ -34,8 +34,21 @@ export default function Settings() {
       </div>}
     </section>
     <section className="card wide"><h3>{t('Dashboard notifications', 'Powiadomienia na pulpicie')}</h3>
+      <label className="setting-row">
+        {t('Daily balance change', 'Dzienna zmiana salda')}
+        <input type="checkbox" role="switch" checked={prefs.change} onChange={e => update({ change: e.target.checked })}/>
+      </label>
+      <div className="balance-threshold">
+        <label htmlFor="balance-threshold">{t('Notify when the balance rises or falls by at least', 'Powiadom, gdy saldo wzrośnie lub spadnie o co najmniej')} <strong>{prefs.changeThreshold}%</strong></label>
+        <div className="threshold-control">
+          <span>5%</span>
+          <input id="balance-threshold" type="range" min="5" max="50" step="1"
+            disabled={!prefs.change} value={prefs.changeThreshold} aria-valuetext={prefs.changeThreshold + '%'}
+            onChange={e => update({ changeThreshold: e.target.valueAsNumber })}/>
+          <span>50%</span>
+        </div>
+      </div>
       {[
-        ['change', t('Daily balance changes by 20% or more', 'Dzienna zmiana salda o co najmniej 20%')],
         ['low', t('Forecast balance reaches the reserve or falls below zero', 'Prognozowane saldo osiąga poziom rezerwy lub spada poniżej zera')],
         ['approval', t('An agent decision needs approval', 'Decyzja agenta wymaga zatwierdzenia')],
       ].map(([key,label]) => <label className="setting-row" key={key}>{label}<input type="checkbox" role="switch" checked={prefs[key]} onChange={e => update({[key]: e.target.checked})}/></label>)}

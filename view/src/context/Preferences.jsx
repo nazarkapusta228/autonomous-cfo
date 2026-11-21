@@ -3,7 +3,7 @@ import { useExchangeRates } from '../lib/exchangeRates';
 import polish from '../lib/polish.json';
 
 const Context = createContext(null);
-const defaults = { language: 'en', theme: 'dark', size: 'medium', currency: 'EUR', low: true, change: true, approval: true };
+const defaults = { language: 'en', theme: 'dark', size: 'medium', currency: 'EUR', low: true, change: true, changeThreshold: 20, approval: true };
 const key = 'cfo.preferences.v1';
 
 export function Preferences({ children }) {

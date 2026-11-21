@@ -58,7 +58,7 @@ export default function Dashboard() {
           .reduce((sum, row) => sum + Math.round(Number(row.amount_eur) * 100), 0);
         const previousCents = closingCents - movementCents;
         const alerts = [];
-        if (prefs.change && previousCents !== 0 && Math.abs(movementCents / previousCents) >= 0.2)
+        if (prefs.change && previousCents !== 0 && Math.abs(movementCents) * 100 >= Math.abs(previousCents) * prefs.changeThreshold)
           alerts.push(tr('Large daily balance change', 'Duża dzienna zmiana salda') + ' · ' + fc.as_of);
         const firstLow = [{ day: fc.as_of, balance: fc.opening_balance }, ...fc.daily_balances]
           .find(point => Number(point.balance) <= Number(fc.reserve));
