@@ -59,9 +59,21 @@ class PasswordChange(PasswordCheck):
     new_password: Password
 
 
+MailCode = Annotated[str, Field(pattern=r"^[0-9]{6}$")]
+
+
 class Confirmation(PasswordCheck):
-    code: str = Field(min_length=12, max_length=64)
-    purpose: Literal["activate", "reset", "email"]
+    code: MailCode
+    email: Email
+    purpose: Literal["activate", "email"]
+
+
+class ResetCode(Address):
+    code: MailCode
+
+
+class ResetPassword(PasswordCheck):
+    token: str = Field(min_length=43, max_length=43)
 
 
 def connection():
@@ -151,12 +163,12 @@ def mail_receipt():
 
 
 def issue(conn, user_id, purpose, destination):
-    code = secrets.token_hex(10).upper()
+    code = f"{secrets.randbelow(1_000_000):06d}"
     conn.execute(
         "INSERT INTO cfo_mail_codes VALUES (%s,%s,%s,%s,now()+interval '20 minutes') "
         "ON CONFLICT(user_id,purpose) DO UPDATE SET digest=excluded.digest, "
         "destination=excluded.destination, expires_at=excluded.expires_at",
-        (digest(code), user_id, purpose, destination),
+        (digest(f"{user_id}:{purpose}:{code}"), user_id, purpose, destination),
     )
     send_code(destination, purpose, code)
 
@@ -277,19 +289,54 @@ def change_email(request: Request, body: Credentials):
     return mail_receipt()
 
 
-@router.post("/confirm")
-def confirm(request: Request, body: Confirmation):
+def check_code(conn, request, email, purpose, code):
+    limit("verify-ip:" + request.client.host, 60)
+    limit(f"verify:{purpose}:{email}", 5)
+    row = conn.execute(
+        "SELECT u.*,c.destination,c.digest FROM cfo_users u JOIN cfo_mail_codes c "
+        "ON c.user_id=u.id WHERE u.email=%s AND c.purpose=%s AND c.expires_at>now() "
+        "FOR UPDATE OF u,c",
+        (email, purpose),
+    ).fetchone()
+    if not row or not hmac.compare_digest(row["digest"], digest(f"{row['id']}:{purpose}:{code}")):
+        raise HTTPException(400, "Invalid or expired code")
+    return row
+
+
+@router.post("/reset-code")
+def verify_reset_code(request: Request, body: ResetCode):
     with connection() as conn:
-        key = digest(body.code.strip().upper())
+        row = check_code(conn, request, body.email, "reset", body.code)
+        token = secrets.token_urlsafe(32)
+        conn.execute(
+            "UPDATE cfo_mail_codes SET digest=%s WHERE digest=%s", (digest(token), row["digest"])
+        )
+    return {"token": token}
+
+
+@router.post("/reset-password")
+def reset_password(body: ResetPassword):
+    with connection() as conn:
         row = conn.execute(
-            "SELECT u.*,c.destination FROM cfo_users u JOIN cfo_mail_codes c "
-            "ON c.user_id=u.id WHERE c.digest=%s AND c.purpose=%s AND c.expires_at>now() "
-            "FOR UPDATE OF u,c",
-            (key, body.purpose),
+            "SELECT u.id FROM cfo_users u JOIN cfo_mail_codes c ON c.user_id=u.id "
+            "WHERE c.digest=%s AND c.purpose='reset' AND c.expires_at>now() FOR UPDATE OF u,c",
+            (digest(body.token),),
         ).fetchone()
         if not row:
             raise HTTPException(400, "Invalid or expired code")
-        if body.purpose != "reset" and not matches(body.password, row["password_hash"]):
+        conn.execute(
+            "UPDATE cfo_users SET password_hash=%s WHERE id=%s", (hashed(body.password), row["id"])
+        )
+        conn.execute("DELETE FROM cfo_sessions WHERE user_id=%s", (row["id"],))
+        conn.execute("DELETE FROM cfo_mail_codes WHERE user_id=%s", (row["id"],))
+    return {"ok": True}
+
+
+@router.post("/confirm")
+def confirm(request: Request, body: Confirmation):
+    with connection() as conn:
+        row = check_code(conn, request, body.email, body.purpose, body.code)
+        if not matches(body.password, row["password_hash"]):
             raise HTTPException(400, "Incorrect password")
         if body.purpose == "activate":
             workspace = ws.create_workspace(conn, database_dsn(Settings()))
@@ -307,14 +354,7 @@ def confirm(request: Request, body: Confirmation):
             except psycopg.errors.UniqueViolation as exc:
                 raise HTTPException(409, "Email address is unavailable") from exc
             conn.execute("DELETE FROM cfo_mail_codes WHERE user_id=%s", (row["id"],))
-        else:
-            conn.execute(
-                "UPDATE cfo_users SET password_hash=%s WHERE id=%s",
-                (hashed(body.password), row["id"]),
-            )
-            conn.execute("DELETE FROM cfo_sessions WHERE user_id=%s", (row["id"],))
-            conn.execute("DELETE FROM cfo_mail_codes WHERE user_id=%s", (row["id"],))
-        conn.execute("DELETE FROM cfo_mail_codes WHERE digest=%s", (key,))
+        conn.execute("DELETE FROM cfo_mail_codes WHERE digest=%s", (row["digest"],))
     return {"ok": True}
 
 

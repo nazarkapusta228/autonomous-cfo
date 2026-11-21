@@ -25,12 +25,20 @@ function Field({
         type={type}
         autoComplete={autoComplete}
         minLength={minLength}
-        maxLength={maxLength}
+        maxLength={name === 'code' ? 6 : maxLength}
+        pattern={name === 'code' ? '[0-9]{6}' : undefined}
+        inputMode={name === 'code' ? 'numeric' : undefined}
         value={value}
         onChange={onChange}
       />
     </label>
   );
+}
+
+function RepeatPassword() {
+  const { t } = usePreferences();
+  return <Field name="repeat" type="password" autoComplete="new-password"
+    label={t('Confirm new password', 'Powtórz nowe hasło')} />;
 }
 
 export function AccountGate({ children }) {
@@ -119,12 +127,14 @@ function Login() {
   const { t } = usePreferences();
   const [mode, setMode] = useState('login');
   const [email, setEmail] = useState('');
+  const [resetToken, setResetToken] = useState('');
   const [signupPassword, setSignupPassword] = useState('');
   const [busy, setBusy] = useState(false);
   const [receipt, setReceipt] = useState(null);
   const [notice, setNotice] = useState('');
   const [error, setError] = useState('');
   const labels = {
+    resetCode: t('Verify reset code', 'Potwierdź kod resetowania'),
     login: t('Sign in', 'Zaloguj się'),
     signup: t('Create account', 'Utwórz konto'),
     forgot: t('Send reset code', 'Wyślij kod resetowania'),
@@ -144,10 +154,8 @@ function Login() {
       'Enter the email address you used to register.',
       'Podaj adres e-mail użyty przy rejestracji.',
     ),
-    reset: t(
-      'Enter your latest code and choose a new password.',
-      'Wpisz najnowszy kod i wybierz nowe hasło.',
-    ),
+    resetCode: t('Enter the six-digit code from your email.', 'Wpisz sześciocyfrowy kod z wiadomości e-mail.'),
+    reset: t('Enter your new password twice.', 'Wpisz dwukrotnie nowe hasło.'),
     activate: t(
       'Enter the latest verification code. It is valid for 20 minutes.',
       'Wpisz najnowszy kod potwierdzający. Jest ważny przez 20 minut.',
@@ -159,6 +167,7 @@ function Login() {
     setNotice('');
     setReceipt(null);
     setSignupPassword('');
+    setResetToken('');
   }
   async function submit(e) {
     e.preventDefault();
@@ -168,21 +177,38 @@ function Login() {
     setError('');
     setNotice('');
     try {
-      if (mode === 'login') setUser(await api('account/login', values));
+      if (e.nativeEvent.submitter?.value === 'existingCode') {
+        change(mode === 'forgot' ? 'resetCode' : 'activate');
+        setEmail(values.email.trim());
+        setSignupPassword(values.password || '');
+      } else if (mode === 'login') setUser(await api('account/login', values));
       else if (mode === 'signup' || mode === 'forgot') {
         const delivery = await api('account/' + mode, values);
-        change(mode === 'signup' ? 'activate' : 'reset');
+        change(mode === 'signup' ? 'activate' : 'resetCode');
         setEmail(values.email.trim());
         if (mode === 'signup') setSignupPassword(values.password);
         setReceipt(delivery);
+      } else if (mode === 'resetCode') {
+        const { token } = await api('account/reset-code', { email, code: values.code });
+        change('reset');
+        setResetToken(token);
+      } else if (mode === 'reset') {
+        if (values.password !== values.repeat) {
+          setError(t('Passwords do not match.', 'Hasła nie są takie same.'));
+          return;
+        }
+        await api('account/reset-password', { token: resetToken, password: values.password });
+        change('login');
+        setNotice('changed');
       } else {
         await api('account/confirm', {
           ...values,
-          password: signupPassword || values.password,
+          email,
+          password: signupPassword,
           purpose: mode,
         });
         change('login');
-        setNotice(mode === 'activate' ? 'verified' : 'changed');
+        setNotice('verified');
       }
     } catch (err) {
       setError(err.message);
@@ -208,7 +234,7 @@ function Login() {
       setBusy(false);
     }
   }
-  const confirmation = mode === 'activate' || mode === 'reset';
+  const confirmation = mode === 'activate' || mode === 'resetCode';
   return (
     <main className="auth-layout">
       <section className="card auth-card" aria-labelledby="auth-title">
@@ -221,7 +247,7 @@ function Login() {
           <p>{guidance[mode]}</p>
         </div>
         <DeliveryNotice receipt={receipt} email={email} />
-        <form key={mode} className="account-form" onSubmit={submit}>
+        <form id="auth-form" key={mode} className="account-form" onSubmit={submit}>
           {mode === 'signup' && (
             <div className="name-fields">
               <Field
@@ -238,7 +264,7 @@ function Login() {
               />
             </div>
           )}
-          {!confirmation && (
+          {['login', 'signup', 'forgot'].includes(mode) && (
             <Field
               name="email"
               label={t('Email', 'Adres e-mail')}
@@ -255,7 +281,7 @@ function Login() {
               autoComplete="one-time-code"
             />
           )}
-          {mode !== 'forgot' && !(mode === 'activate' && signupPassword) && (
+          {['login', 'signup', 'reset'].includes(mode) && (
             <Field
               name="password"
               label={
@@ -273,6 +299,7 @@ function Login() {
               }
             />
           )}
+          {mode === 'reset' && <RepeatPassword />}
           {['signup', 'reset'].includes(mode) && (
             <small>
               {t('Use at least 10 characters.', 'Użyj co najmniej 10 znaków.')}
@@ -330,11 +357,11 @@ function Login() {
               {t('Back to sign in', 'Powrót do logowania')}
             </button>
           )}
-          {['signup', 'forgot'].includes(mode) && (
+          {['login', 'forgot'].includes(mode) && (
             <button
               disabled={busy}
               className="btn btn-ghost"
-              onClick={() => change(mode === 'signup' ? 'activate' : 'reset')}
+              type="submit" form="auth-form" value="existingCode"
             >
               {t('I have a code', 'Mam kod')}
             </button>
@@ -357,6 +384,7 @@ export function Profile() {
     [busy, setBusy] = useState(false),
     [msg, setMsg] = useState(''),
     [error, setError] = useState('');
+  const [resetToken, setResetToken] = useState('');
   const [delivery, setDelivery] = useState(null);
   const labels = {
     names: t('Edit name', 'Zmień dane'),
@@ -381,17 +409,27 @@ export function Profile() {
         return;
       }
       if (action === 'confirm') {
-        await api('account/confirm', { ...fields, purpose: 'email' });
+        await api('account/confirm', { ...fields, email: user.email, purpose: 'email' });
         setUser(await api('account/me'));
       }
       if (action === 'forgot') {
         const receipt = await api('account/forgot', { email: user.email });
         setDelivery({ receipt, email: user.email });
+        setMode('resetCode');
+        return;
+      }
+      if (action === 'resetCode') {
+        const { token } = await api('account/reset-code', { email: user.email, code: fields.code });
+        setResetToken(token);
         setMode('reset');
         return;
       }
       if (action === 'reset') {
-        await api('account/confirm', { ...fields, purpose: 'reset' });
+        if (fields.password !== fields.repeat) {
+          setError(t('Passwords do not match.', 'Hasła nie są takie same.'));
+          return;
+        }
+        await api('account/reset-password', { token: resetToken, password: fields.password });
         setUser(null);
         return;
       }
@@ -447,7 +485,7 @@ export function Profile() {
             run(mode, Object.fromEntries(new FormData(e.currentTarget)));
           }}
         >
-          {['confirm', 'reset'].includes(mode) && delivery && (
+          {['confirm', 'resetCode'].includes(mode) && delivery && (
             <DeliveryNotice {...delivery} />
           )}
           {mode === 'names' &&
@@ -472,7 +510,7 @@ export function Profile() {
               type="email"
             />
           )}
-          {['confirm', 'reset'].includes(mode) && (
+          {['confirm', 'resetCode'].includes(mode) && (
             <Field
               name="code"
               label={t('Email code', 'Kod z wiadomości')}
@@ -487,7 +525,7 @@ export function Profile() {
               )}
             </p>
           )}
-          {mode !== 'names' && (
+          {!['names', 'resetCode'].includes(mode) && (
             <Field
               name="password"
               label={
@@ -503,6 +541,7 @@ export function Profile() {
               maxLength={256}
             />
           )}
+          {mode === 'reset' && <RepeatPassword />}
           {mode === 'password' && (
             <Field
               name="new_password"

@@ -477,7 +477,7 @@ summary { cursor: pointer; color: var(--accent); }
 .auth-card .account-form label { gap: .4rem; }
 .auth-card input, .auth-card .btn { min-height: 44px; }
 .auth-card .btn { justify-content: center; text-align: center; }
-.auth-card .btn-primary { margin-top: .25rem; }
+.auth-card .btn-primary { margin-top: .75rem; }
 .auth-card nav { border-top: 1px solid var(--border); padding-top: 1rem; display: grid; grid-template-columns: repeat(auto-fit, minmax(min(10rem, 100%), 1fr)); }
 .auth-card [role=status], .auth-card [role=alert] { margin: 0; }
 .delivery-notice { display: grid; gap: .35rem; background: var(--bg-elev); border-left: 3px solid var(--accent); padding: .8rem 1rem; font-size: .9rem; overflow-wrap: anywhere; }

@@ -19,7 +19,9 @@ def test_account_lifecycle(postgres_url, monkeypatch):
     email = "owner@example.test"
 
     def verify(purpose, secret):
-        return post("confirm", purpose=purpose, code=messages[-1][2], password=secret)
+        code = messages[-1][2]
+        assert len(code) == 6 and code.isascii() and code.isdigit()
+        return post("confirm", email=email, purpose=purpose, code=code, password=secret)
 
     assert browser.get("/api/workspace").status_code == 401
     assert post(
@@ -44,7 +46,14 @@ def test_account_lifecycle(postgres_url, monkeypatch):
     assert verify("email", password).is_success
     assert post("forgot", email=new_email).is_success
     new_password = "second-test-password"
-    assert verify("reset", new_password).is_success
+    code = messages[-1][2]
+    assert post("reset-code", email=email, code=code).status_code == 400
+    verified = post("reset-code", email=new_email, code=code)
+    assert verified.is_success
+    assert post("reset-code", email=new_email, code=code).status_code == 400
+    token = verified.json()["token"]
+    assert post("reset-password", token=token, password=new_password).is_success
+    assert post("reset-password", token=token, password=password).status_code == 400
     assert browser.get("/api/workspace").status_code == 401
     assert post("login", email=new_email, password=password).status_code == 401
     assert post("login", email=new_email, password=new_password).is_success

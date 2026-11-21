@@ -18,7 +18,7 @@ def client():
     code = mail.call_args.args[-1]
     assert browser.post(
         "/api/account/confirm",
-        json=dict(purpose="activate", code=code, password=credentials["password"]),
+        json=dict(purpose="activate", code=code, **credentials),
     ).is_success
     assert browser.post("/api/account/login", json=credentials).is_success
     return browser
