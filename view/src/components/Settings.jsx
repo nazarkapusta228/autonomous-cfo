@@ -1,4 +1,5 @@
 import React from 'react';
+import { RotateCw } from 'lucide-react';
 import { usePreferences } from '../context/Preferences';
 
 export default function Settings() {
@@ -26,7 +27,10 @@ export default function Settings() {
         {exchange.failed && <><p>{exchange.table
           ? t('Update unavailable. Using the rate above.', 'Aktualizacja niedostępna. Obowiązuje powyższy kurs.')
           : t('Rate unavailable. Showing EUR.', 'Kurs niedostępny. Kwoty w EUR.')}</p>
-          <button className="btn btn-ghost" onClick={exchange.retry}>{t('Retry')}</button></>}
+          <button type="button" className="btn btn-ghost rate-retry" disabled={exchange.loading} onClick={exchange.retry}>
+            <RotateCw size={15} aria-hidden="true" />
+            {exchange.loading ? t('Retrying…', 'Ponawianie…') : t('Retry')}
+          </button></>}
       </div>}
     </section>
     <section className="card wide"><h3>{t('Dashboard notifications', 'Powiadomienia na pulpicie')}</h3>

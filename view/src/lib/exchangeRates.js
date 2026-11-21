@@ -14,6 +14,7 @@ export function fromNbpTable([table]) {
 
 export function useExchangeRates() {
   const [table, setTable] = useState(null);
+  const [loading, setLoading] = useState(false);
   const [failed, setFailed] = useState(false);
   const [attempt, setAttempt] = useState(0);
   useEffect(() => {
@@ -21,6 +22,7 @@ export function useExchangeRates() {
     let controller;
     async function refresh() {
       if (controller) return;
+      setLoading(true);
       controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), 10000);
       try {
@@ -30,11 +32,15 @@ export function useExchangeRates() {
         if (active) { setTable(next); setFailed(false); }
       } catch {
         if (active) setFailed(true);
-      } finally { clearTimeout(timeout); controller = null; }
+      } finally {
+        clearTimeout(timeout);
+        controller = null;
+        if (active) setLoading(false);
+      }
     }
     refresh();
     const timer = setInterval(refresh, interval);
     return () => { active = false; clearInterval(timer); controller?.abort(); };
   }, [attempt]);
-  return { table, failed, retry: () => setAttempt(previous => previous + 1) };
+  return { table, failed, loading, retry: () => setAttempt(previous => previous + 1) };
 }
