@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
+import LanguageSwitcher from './LanguageSwitcher';
 import { api } from '../lib/api';
 import { usePreferences } from '../context/Preferences';
 
@@ -65,18 +66,64 @@ export function AccountGate({ children }) {
       </main>
     );
   return (
-    <Account.Provider value={{ user, setUser }}>{user ? children : <Login />}</Account.Provider>
+    <Account.Provider value={{ user, setUser }}>
+      {user ? children : <Login />}
+    </Account.Provider>
+  );
+}
+
+function DeliveryNotice({ receipt, email }) {
+  const { t } = usePreferences();
+  if (!receipt) return null;
+  const preview = receipt.delivery === 'preview';
+  let inbox;
+  if (
+    preview && receipt.preview_url &&
+    ['localhost', '127.0.0.1', '[::1]'].includes(window.location.hostname)
+  ) {
+    try {
+      const url = new URL(receipt.preview_url);
+      if (
+        url.protocol === 'http:' &&
+        ['localhost', '127.0.0.1', '[::1]'].includes(url.hostname)
+      ) {
+        inbox = url.href;
+      }
+    } catch {
+      /* The private mailbox may have no local URL configured. */
+    }
+  }
+  return (
+    <div className="delivery-notice" role="status">
+      {preview
+        ? t(
+            'Codes go to the private Mailpit inbox in this environment.',
+            'W tym środowisku kody trafiają do prywatnej skrzynki Mailpit.',
+          )
+        : t(
+            'Check your inbox and spam folder for the latest code.',
+            'Sprawdź skrzynkę odbiorczą i folder spam, aby znaleźć najnowszy kod.',
+          )}
+      <strong>{email}</strong>
+      {inbox && (
+        <a href={inbox} target="_blank" rel="noreferrer">
+          {t('Open local inbox', 'Otwórz lokalną skrzynkę')}
+        </a>
+      )}
+    </div>
   );
 }
 
 function Login() {
   const { setUser } = useAccount();
-  const { t, prefs, update } = usePreferences();
-  const [mode, setMode] = useState('login'),
-    [email, setEmail] = useState('');
-  const [busy, setBusy] = useState(false),
-    [notice, setNotice] = useState(''),
-    [error, setError] = useState('');
+  const { t } = usePreferences();
+  const [mode, setMode] = useState('login');
+  const [email, setEmail] = useState('');
+  const [signupPassword, setSignupPassword] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [receipt, setReceipt] = useState(null);
+  const [notice, setNotice] = useState('');
+  const [error, setError] = useState('');
   const labels = {
     login: t('Sign in', 'Zaloguj się'),
     signup: t('Create account', 'Utwórz konto'),
@@ -84,10 +131,34 @@ function Login() {
     reset: t('Set new password', 'Ustaw nowe hasło'),
     activate: t('Verify email', 'Potwierdź adres e-mail'),
   };
+  const guidance = {
+    login: t(
+      'Sign in to your finance workspace.',
+      'Zaloguj się do swojej przestrzeni finansowej.',
+    ),
+    signup: t(
+      'Use an email address you can verify.',
+      'Podaj adres e-mail, do którego masz dostęp.',
+    ),
+    forgot: t(
+      'Enter the email address you used to register.',
+      'Podaj adres e-mail użyty przy rejestracji.',
+    ),
+    reset: t(
+      'Enter your latest code and choose a new password.',
+      'Wpisz najnowszy kod i wybierz nowe hasło.',
+    ),
+    activate: t(
+      'Enter the latest verification code. It is valid for 20 minutes.',
+      'Wpisz najnowszy kod potwierdzający. Jest ważny przez 20 minut.',
+    ),
+  };
   function change(next) {
     setMode(next);
     setError('');
     setNotice('');
+    setReceipt(null);
+    setSignupPassword('');
   }
   async function submit(e) {
     e.preventDefault();
@@ -99,21 +170,40 @@ function Login() {
     try {
       if (mode === 'login') setUser(await api('account/login', values));
       else if (mode === 'signup' || mode === 'forgot') {
-        await api('account/' + mode, values);
+        const delivery = await api('account/' + mode, values);
         change(mode === 'signup' ? 'activate' : 'reset');
-        setNotice(
-          t(
-            'Check your inbox for a code. It expires in 20 minutes.',
-            'Sprawdź skrzynkę e-mail. Kod jest ważny przez 20 minut.',
-          ),
-        );
+        setEmail(values.email.trim());
+        if (mode === 'signup') setSignupPassword(values.password);
+        setReceipt(delivery);
       } else {
-        await api('account/confirm', { ...values, purpose: mode });
+        await api('account/confirm', {
+          ...values,
+          password: signupPassword || values.password,
+          purpose: mode,
+        });
         change('login');
-        setNotice(t('Done. Sign in to continue.', 'Gotowe. Zaloguj się, aby kontynuować.'));
+        setNotice(mode === 'activate' ? 'verified' : 'changed');
       }
     } catch (err) {
-      setError(t(err.message));
+      setError(err.message);
+    } finally {
+      setBusy(false);
+    }
+  }
+  async function resend() {
+    if (busy) return;
+    setBusy(true);
+    setError('');
+    setNotice('');
+    try {
+      setReceipt(
+        await api(mode === 'activate' ? 'account/resend' : 'account/forgot', {
+          email,
+        }),
+      );
+      setNotice('resent');
+    } catch (err) {
+      setError(err.message);
     } finally {
       setBusy(false);
     }
@@ -121,19 +211,16 @@ function Login() {
   const confirmation = mode === 'activate' || mode === 'reset';
   return (
     <main className="auth-layout">
-      <section className="card auth-card">
+      <section className="card auth-card" aria-labelledby="auth-title">
         <header>
           <strong>Autonomous CFO</strong>
-          <select
-            aria-label={t('Language', 'Język')}
-            value={prefs.language}
-            onChange={(e) => update({ language: e.target.value })}
-          >
-            <option value="en">English</option>
-            <option value="pl">Polski</option>
-          </select>
+          <LanguageSwitcher />
         </header>
-        <h1>{labels[mode]}</h1>
+        <div className="auth-heading">
+          <h1 id="auth-title">{labels[mode]}</h1>
+          <p>{guidance[mode]}</p>
+        </div>
+        <DeliveryNotice receipt={receipt} email={email} />
         <form key={mode} className="account-form" onSubmit={submit}>
           {mode === 'signup' && (
             <div className="name-fields">
@@ -168,49 +255,93 @@ function Login() {
               autoComplete="one-time-code"
             />
           )}
-          {mode !== 'forgot' && (
+          {mode !== 'forgot' && !(mode === 'activate' && signupPassword) && (
             <Field
               name="password"
-              label={mode === 'reset' ? t('New password', 'Nowe hasło') : t('Password', 'Hasło')}
+              label={
+                mode === 'reset'
+                  ? t('New password', 'Nowe hasło')
+                  : t('Password', 'Hasło')
+              }
               type="password"
               minLength={10}
               maxLength={256}
               autoComplete={
-                ['signup', 'reset'].includes(mode) ? 'new-password' : 'current-password'
+                ['signup', 'reset'].includes(mode)
+                  ? 'new-password'
+                  : 'current-password'
               }
             />
           )}
-          {mode === 'signup' && (
-            <small>{t('Use at least 10 characters.', 'Użyj co najmniej 10 znaków.')}</small>
+          {['signup', 'reset'].includes(mode) && (
+            <small>
+              {t('Use at least 10 characters.', 'Użyj co najmniej 10 znaków.')}
+            </small>
           )}
+          {error && <p role="alert">{t(error)}</p>}
           <button disabled={busy} className="btn btn-primary">
             {labels[mode]}
           </button>
         </form>
-        <p role="status">{notice}</p>
-        {error && <p role="alert">{error}</p>}
-        <nav>
+        {notice && (
+          <p role="status">
+            {
+              {
+                verified: t(
+                  'Email verified. You can now sign in.',
+                  'Adres e-mail potwierdzony. Możesz się teraz zalogować.',
+                ),
+                changed: t(
+                  'Password updated. Sign in with your new password.',
+                  'Hasło zmienione. Zaloguj się nowym hasłem.',
+                ),
+                resent: t(
+                  'Code requested. Use the newest message for this address.',
+                  'Poproszono o kod. Użyj najnowszej wiadomości dla tego adresu.',
+                ),
+              }[notice]
+            }
+          </p>
+        )}
+        <nav aria-label={t('Account options', 'Opcje konta')}>
           {mode === 'login' ? (
             <>
-              <button className="btn btn-ghost" onClick={() => change('signup')}>
+              <button
+                disabled={busy}
+                className="btn btn-ghost"
+                onClick={() => change('signup')}
+              >
                 {labels.signup}
               </button>
-              <button className="btn btn-ghost" onClick={() => change('forgot')}>
+              <button
+                disabled={busy}
+                className="btn btn-ghost"
+                onClick={() => change('forgot')}
+              >
                 {t('Forgot password?', 'Nie pamiętasz hasła?')}
               </button>
             </>
           ) : (
-            <button className="btn btn-ghost" onClick={() => change('login')}>
+            <button
+              disabled={busy}
+              className="btn btn-ghost"
+              onClick={() => change('login')}
+            >
               {t('Back to sign in', 'Powrót do logowania')}
             </button>
           )}
           {['signup', 'forgot'].includes(mode) && (
             <button
-              type="button"
+              disabled={busy}
               className="btn btn-ghost"
               onClick={() => change(mode === 'signup' ? 'activate' : 'reset')}
             >
               {t('I have a code', 'Mam kod')}
+            </button>
+          )}
+          {confirmation && email && (
+            <button disabled={busy} className="btn btn-ghost" onClick={resend}>
+              {t('Resend code', 'Wyślij kod ponownie')}
             </button>
           )}
         </nav>
@@ -226,6 +357,7 @@ export function Profile() {
     [busy, setBusy] = useState(false),
     [msg, setMsg] = useState(''),
     [error, setError] = useState('');
+  const [delivery, setDelivery] = useState(null);
   const labels = {
     names: t('Edit name', 'Zmień dane'),
     email: t('Change email', 'Zmień e-mail'),
@@ -243,9 +375,9 @@ export function Profile() {
     try {
       if (action === 'names') setUser(await api('account/names', fields));
       if (action === 'email') {
-        await api('account/change-email', fields);
+        const receipt = await api('account/change-email', fields);
+        setDelivery({ receipt, email: fields.email });
         setMode('confirm');
-        setMsg(t('Check your new email for the code.', 'Sprawdź kod na nowym adresie e-mail.'));
         return;
       }
       if (action === 'confirm') {
@@ -253,11 +385,9 @@ export function Profile() {
         setUser(await api('account/me'));
       }
       if (action === 'forgot') {
-        await api('account/forgot', { email: user.email });
+        const receipt = await api('account/forgot', { email: user.email });
+        setDelivery({ receipt, email: user.email });
         setMode('reset');
-        setMsg(
-          t('Check your inbox for the reset code.', 'Sprawdź kod resetowania w skrzynce e-mail.'),
-        );
         return;
       }
       if (action === 'reset') {
@@ -286,22 +416,27 @@ export function Profile() {
       <p>{user.email}</p>
       {!mode ? (
         <div className="profile-actions">
-          {['names', 'email', 'password', 'forgot', 'logout', 'delete'].map((action) => (
-            <button
-              key={action}
-              disabled={busy}
-              type="button"
-              className={'btn ' + (action === 'delete' ? 'btn-danger' : 'btn-ghost')}
-              onClick={() => {
-                setMsg('');
-                setError('');
-                if (['logout', 'forgot'].includes(action)) run(action);
-                else setMode(action);
-              }}
-            >
-              {labels[action]}
-            </button>
-          ))}
+          {['names', 'email', 'password', 'forgot', 'logout', 'delete'].map(
+            (action) => (
+              <button
+                key={action}
+                disabled={busy}
+                type="button"
+                className={
+                  'btn ' + (action === 'delete' ? 'btn-danger' : 'btn-ghost')
+                }
+                onClick={() => {
+                  setMsg('');
+                  setError('');
+                  setDelivery(null);
+                  if (['logout', 'forgot'].includes(action)) run(action);
+                  else setMode(action);
+                }}
+              >
+                {labels[action]}
+              </button>
+            ),
+          )}
         </div>
       ) : (
         <form
@@ -312,6 +447,9 @@ export function Profile() {
             run(mode, Object.fromEntries(new FormData(e.currentTarget)));
           }}
         >
+          {['confirm', 'reset'].includes(mode) && delivery && (
+            <DeliveryNotice {...delivery} />
+          )}
           {mode === 'names' &&
             [
               ['first_name', t('First name', 'Imię')],
@@ -319,11 +457,20 @@ export function Profile() {
             ].map(([key, label]) => (
               <label key={key}>
                 {label}
-                <input name={key} required maxLength={100} defaultValue={user[key]} />
+                <input
+                  name={key}
+                  required
+                  maxLength={100}
+                  defaultValue={user[key]}
+                />
               </label>
             ))}
           {mode === 'email' && (
-            <Field name="email" label={t('New email', 'Nowy e-mail')} type="email" />
+            <Field
+              name="email"
+              label={t('New email', 'Nowy e-mail')}
+              type="email"
+            />
           )}
           {['confirm', 'reset'].includes(mode) && (
             <Field
@@ -349,7 +496,9 @@ export function Profile() {
                   : t('Current password', 'Obecne hasło')
               }
               type="password"
-              autoComplete={mode === 'reset' ? 'new-password' : 'current-password'}
+              autoComplete={
+                mode === 'reset' ? 'new-password' : 'current-password'
+              }
               minLength={10}
               maxLength={256}
             />
@@ -378,7 +527,9 @@ export function Profile() {
           )}
           <button
             disabled={busy}
-            className={'btn ' + (mode === 'delete' ? 'btn-danger' : 'btn-primary')}
+            className={
+              'btn ' + (mode === 'delete' ? 'btn-danger' : 'btn-primary')
+            }
           >
             {mode === 'delete' ? labels.delete : t('Save', 'Zapisz')}
           </button>

@@ -9,19 +9,27 @@ export async function exerciseAccount(page) {
     updatedPassword = randomUUID();
   const email = id + '@example.invalid',
     newEmail = id + '-new@example.invalid';
-  const click = (name) => page.getByRole('button', { name, exact: true }).click();
-  const field = (name, value) => page.getByLabel(name, { exact: true }).fill(value);
+  const click = (name) =>
+    page.getByRole('button', { name, exact: true }).click();
+  const field = (name, value) =>
+    page.getByLabel(name, { exact: true }).fill(value);
   async function code(address, subject) {
     await page.getByLabel('Email code', { exact: true }).waitFor();
-    const query = new URLSearchParams({ query: 'to:' + address + ' subject:"' + subject + '"' });
+    const query = new URLSearchParams({
+      query: 'to:' + address + ' subject:"' + subject + '"',
+    });
     for (let i = 0; i < 80; i++) {
       const res = await fetch(inbox + '/api/v1/search?' + query);
       assert(res.ok);
       const msg = (await res.json()).messages.find(
-        (m) => m.To.some((to) => to.Address === address) && m.Subject.endsWith(subject),
+        (m) =>
+          m.To.some((to) => to.Address === address) &&
+          m.Subject.endsWith(subject),
       );
       if (msg) {
-        const full = await (await fetch(inbox + '/api/v1/message/' + msg.ID)).json();
+        const full = await (
+          await fetch(inbox + '/api/v1/message/' + msg.ID)
+        ).json();
         return full.Text.match(/\b[A-F0-9]{20}\b/)[0];
       }
       await new Promise((resolve) => setTimeout(resolve, 250));
@@ -34,14 +42,38 @@ export async function exerciseAccount(page) {
     await click('Sign in');
     await page.locator('.user-chip').waitFor();
   }
+  await click('Polski');
+  await page
+    .getByRole('heading', { name: 'Zaloguj się', exact: true })
+    .waitFor();
+  assert.equal(
+    await page
+      .getByRole('button', { name: 'Polski' })
+      .getAttribute('aria-pressed'),
+    'true',
+  );
+  await click('English');
   await click('Create account');
   await field('First name', 'Anna');
   await field('Last name', 'Nowak');
   await field('Email', email);
   await field('Password', password);
   await click('Create account');
-  await field('Email code', await code(email, 'Verify your email'));
-  await field('Password', password);
+  const originalCode = await code(email, 'Verify your email');
+  const resent = page.waitForResponse((response) =>
+    response.url().endsWith('/account/resend'),
+  );
+  await click('Resend code');
+  assert.equal((await (await resent).json()).delivery, 'preview');
+  await field('Email code', originalCode);
+  await click('Verify email');
+  await page
+    .getByRole('alert')
+    .filter({ hasText: 'Invalid or expired code' })
+    .waitFor();
+  const latestCode = await code(email, 'Verify your email');
+  assert.notEqual(latestCode, originalCode);
+  await field('Email code', latestCode);
   await click('Verify email');
   await login(email, password);
   await page.reload();
@@ -66,7 +98,9 @@ export async function exerciseAccount(page) {
   await field('New password', updatedPassword);
   await click('Set new password');
   await login(newEmail, updatedPassword);
-  console.log('Email activation, persistent login, name, email change, logout and reset verified');
+  console.log(
+    'Email activation, persistent login, name, email change, logout and reset verified',
+  );
   return async () => {
     await page.locator('.user-chip').click();
     await click('Delete my account');
@@ -75,6 +109,9 @@ export async function exerciseAccount(page) {
     await field('Current password', updatedPassword);
     await click('Delete my account');
     await page.getByRole('heading', { name: 'Sign in', exact: true }).waitFor();
-    assert.equal(await page.evaluate(async () => (await fetch('/api/workspace')).status), 401);
+    assert.equal(
+      await page.evaluate(async () => (await fetch('/api/workspace')).status),
+      401,
+    );
   };
 }

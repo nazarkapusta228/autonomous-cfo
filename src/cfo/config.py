@@ -13,6 +13,7 @@ class Settings(BaseSettings):
     smtp_host: str = ""
     smtp_port: int = 587
     smtp_tls: str = "starttls"
+    smtp_preview_inbox_url: str = ""
     smtp_from: str = ""
     smtp_username: str = ""
     smtp_password: SecretStr = SecretStr("")

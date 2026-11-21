@@ -35,14 +35,14 @@ FastAPI and open http://127.0.0.1:5173. API documentation is available at `/docs
 ## Accounts and email
 
 Apply the SQL migrations before starting FastAPI. Sign up with your name, email and password,
-then enter the emailed code and your signup password. Codes expire after 20 minutes.
+then paste the latest emailed code. If you reopen verification in a new browser session, enter your signup password as well. Codes expire after 20 minutes.
 A verified account owns one workspace across browsers. Its HTTP-only session lasts 7 days from sign-in.
 Password resets revoke all sessions. My profile supports a verified email change and
 permanent account deletion, including that account’s imported statements and decisions.
 
 For delivery to personal addresses, set SMTP_HOST, SMTP_PORT, SMTP_TLS (starttls or implicit),
 SMTP_FROM, SMTP_USERNAME and SMTP_PASSWORD in the optional OpenShift Secret
-`cfo-mail-delivery` or in your local .env. Use an address authorized by your mail provider.
+`cfo-mail-delivery` or in your local .env. Use an address authorized by your mail provider. After changing the Secret, restart the application deployment to reload the SMTP settings.
 
 For team testing, `oc apply -n autonomous-cfo -f deploy/openshift/mail-preview.yaml`
 creates a private Mailpit mailbox and the matching ConfigMap. Team members can open
@@ -50,7 +50,7 @@ the mailbox at http://localhost:8025 after running
 `oc -n autonomous-cfo port-forward deployment/cfo-mail-preview 8025:8025`.
 All messages sent to this preview stay in the sandbox. For a local app connected to it,
 also forward 1025:1025 and set SMTP_HOST=localhost, SMTP_PORT=1025, SMTP_TLS=plain
-and SMTP_FROM=accounts@autonomous-cfo.invalid.
+and SMTP_FROM=accounts@autonomous-cfo.invalid. To show an inbox link when running the app locally, set SMTP_PREVIEW_INBOX_URL to the HTTP loopback address of the forwarded mailbox.
 
 ## Walk through the demo
 

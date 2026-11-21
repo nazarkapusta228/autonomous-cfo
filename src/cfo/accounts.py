@@ -138,6 +138,18 @@ def send_code(email, purpose, code):
         raise HTTPException(503, "Email delivery is unavailable") from exc
 
 
+def mail_receipt():
+    cfg = Settings()
+    preview = cfg.smtp_host.split(".")[0] == "cfo-mail-preview" or (
+        cfg.smtp_host in {"localhost", "127.0.0.1", "::1"}
+        and cfg.smtp_from == "accounts@autonomous-cfo.invalid"
+    )
+    receipt = {"ok": True, "delivery": "preview" if preview else "email"}
+    if preview and cfg.smtp_preview_inbox_url:
+        receipt["preview_url"] = cfg.smtp_preview_inbox_url
+    return receipt
+
+
 def issue(conn, user_id, purpose, destination):
     code = secrets.token_hex(10).upper()
     conn.execute(
@@ -185,7 +197,7 @@ def signup(body: Registration, request: Request):
         ).fetchone()
         if user:
             issue(conn, user["id"], "activate", body.email)
-    return {"ok": True}
+    return mail_receipt()
 
 
 @router.post("/login")
@@ -216,17 +228,27 @@ def login(body: Credentials, response: Response):
         return public(user)
 
 
-@router.post("/forgot")
-def forgot(body: Address, request: Request):
-    limit("forgot:" + request.client.host, 60)
+def request_code(body: Address, request: Request, purpose: Literal["activate", "reset"]):
+    limit("request-code:" + request.client.host, 60)
     limit("mail:" + body.email, 5)
     with connection() as conn:
         user = conn.execute(
-            "SELECT id FROM cfo_users WHERE email=%s AND verified FOR UPDATE", (body.email,)
+            "SELECT id FROM cfo_users WHERE email=%s AND verified=%s FOR UPDATE",
+            (body.email, purpose == "reset"),
         ).fetchone()
         if user:
-            issue(conn, user["id"], "reset", body.email)
-    return {"ok": True}
+            issue(conn, user["id"], purpose, body.email)
+    return mail_receipt()
+
+
+@router.post("/forgot")
+def forgot(body: Address, request: Request):
+    return request_code(body, request, "reset")
+
+
+@router.post("/resend")
+def resend(body: Address, request: Request):
+    return request_code(body, request, "activate")
 
 
 @router.post("/names")
@@ -252,7 +274,7 @@ def change_email(request: Request, body: Credentials):
         if conn.execute("SELECT 1 FROM cfo_users WHERE email=%s", (body.email,)).fetchone():
             raise HTTPException(409, "Email address is unavailable")
         issue(conn, user["id"], "email", body.email)
-    return {"ok": True}
+    return mail_receipt()
 
 
 @router.post("/confirm")

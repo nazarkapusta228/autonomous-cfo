@@ -460,14 +460,28 @@ summary { cursor: pointer; color: var(--accent); }
 
 .pagination { margin-top: 1.5rem; }
 .auth-layout { min-height: 100dvh; display: grid; place-items: center; padding: 1.25rem; background: var(--bg); }
-.auth-card { width: min(100%, 29rem); padding: clamp(1.25rem, 4vw, 2.25rem); }
+.auth-card { display: grid; gap: 1.35rem; min-width: 0; width: min(100%, 29rem); padding: clamp(1.25rem, 4vw, 2.25rem); }
 .auth-card header, .auth-card nav, .profile-actions { display: flex; align-items: center; flex-wrap: wrap; gap: .6rem; }
 .auth-card header { justify-content: space-between; color: var(--primary); }
-.auth-card h1 { font-size: 1.8rem; margin: 1.8rem 0 1.2rem; }
-.auth-card nav { border-top: 1px solid var(--border); padding-top: 1rem; margin-top: 1.2rem; }
 .account-form, .account-form label { display: grid; gap: .65rem; }
 .account-form label { font-size: .9rem; gap: .3rem; }
 .account-form input { width: 100%; min-width: 0; padding: .65rem; background: var(--bg-elev); border: 1px solid var(--border); border-radius: 8px; color: var(--text); font: inherit; }
 .name-fields { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: .6rem; }
-.auth-card [role=status], .auth-card [role=alert] { margin-top: .7rem; }
 .account-form [role=alert], .auth-card [role=alert] { color: var(--danger); }
+
+.auth-card > header { padding-bottom: 1rem; border-bottom: 1px solid var(--border); }
+.auth-heading { text-align: center; }
+.auth-heading h1 { margin: 0 0 .4rem; font-size: clamp(1.75rem, 4vw, 2.25rem); letter-spacing: -.035em; }
+.auth-heading p, .auth-card small { color: var(--text-muted); }
+.auth-card .account-form { gap: 1rem; }
+.auth-card .account-form label { gap: .4rem; }
+.auth-card input, .auth-card .btn { min-height: 44px; }
+.auth-card .btn { justify-content: center; text-align: center; }
+.auth-card .btn-primary { margin-top: .25rem; }
+.auth-card nav { border-top: 1px solid var(--border); padding-top: 1rem; display: grid; grid-template-columns: repeat(auto-fit, minmax(min(10rem, 100%), 1fr)); }
+.auth-card [role=status], .auth-card [role=alert] { margin: 0; }
+.delivery-notice { display: grid; gap: .35rem; background: var(--bg-elev); border-left: 3px solid var(--accent); padding: .8rem 1rem; font-size: .9rem; overflow-wrap: anywhere; }
+.delivery-notice a { color: var(--primary); text-decoration: underline; }
+@media (max-width: 420px) {
+  .auth-card .name-fields { grid-template-columns: 1fr; gap: 1rem; }
+}
