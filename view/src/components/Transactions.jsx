@@ -1,6 +1,6 @@
 import { usePreferences } from '../context/Preferences';
 import { usePeriod } from '../context/StatementPeriod';
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { faMagnifyingGlass } from '@fortawesome/free-solid-svg-icons';
 import { useApp } from '../context/AppContext';
 import BalanceChart from './BalanceChart';
@@ -161,6 +161,32 @@ function EditPayment({transaction, close}) {
   </form>;
 }
 
+function TransactionDetailsDialog({ transaction, close }) {
+  const { t } = usePreferences();
+  const dialog = useRef(null);
+  useEffect(() => {
+    dialog.current?.showModal();
+    return () => dialog.current?.close();
+  }, []);
+  return (
+    <dialog
+      ref={dialog}
+      className="transaction-details-dialog"
+      aria-labelledby="transaction-details-title"
+      onCancel={(event) => { event.preventDefault(); close(); }}
+    >
+      <h3 id="transaction-details-title">{t('Transaction details', 'Szczegóły transakcji')}</h3>
+      <dl>
+        <div><dt>{t('Reference', 'Tytuł')}</dt><dd>{transaction.reference || '—'}</dd></div>
+        <div><dt>{t('Counterparty', 'Kontrahent')}</dt><dd>{transaction.counterparty || '—'}</dd></div>
+      </dl>
+      <div className="modal-actions">
+        <button autoFocus type="button" className="btn btn-ghost" onClick={close}>{t('Close', 'Zamknij')}</button>
+      </div>
+    </dialog>
+  );
+}
+
 export default function Transactions() {
   const { t: tr, money: eur, originalMoney } = usePreferences();
   const { state } = useApp();
@@ -169,7 +195,7 @@ export default function Transactions() {
   const [search, setSearch] = useState('');
   const [notice, setNotice] = useState('');
   const [editing, setEditing] = useState(null);
-  const [detailsRow, setDetailsRow] = useState(null);
+  const [details, setDetails] = useState(null);
   const [page, setPage] = useState(0);
   const period = usePeriod();
   const rows = period.rows.filter(
@@ -269,28 +295,16 @@ export default function Transactions() {
                     <button
                       type="button"
                       className="btn btn-ghost transaction-details-button"
-                      aria-label={`${tr("Show details", "Pokaż szczegóły")}: ${t.reference || tr("No reference", "Brak tytułu")}`}
-                      aria-expanded={detailsRow === t.source_row}
-                      onClick={() => setDetailsRow(detailsRow === t.source_row ? null : t.source_row)}
+                      aria-label={tr("Show transaction details", "Pokaż szczegóły transakcji")}
+                      onClick={() => setDetails(t)}
                     >
                       <svg aria-hidden="true" viewBox={`0 0 ${faMagnifyingGlass.icon[0]} ${faMagnifyingGlass.icon[1]}`} className="transaction-details-icon">
                         <path fill="currentColor" d={faMagnifyingGlass.icon[4]} />
                       </svg>
-                      <span>{tr("Details", "Szczegóły")}</span>
                     </button>
                   </td>
                   <td><button className="btn btn-ghost" onClick={() => setEditing({...t, editPayment:true})}>{tr("Edit row","Edytuj wiersz")}</button></td>
                 </tr>
-                {detailsRow === t.source_row && (
-                  <tr className="transaction-details-row">
-                    <td colSpan={5}>
-                      <div className="transaction-details-content">
-                        <span><strong>{tr("Reference", "Tytuł")}</strong>{t.reference || '—'}</span>
-                        <span><strong>{tr("Counterparty", "Kontrahent")}</strong>{t.counterparty || '—'}</span>
-                      </div>
-                    </td>
-                  </tr>
-                )}
                 {editing?.source_row === t.source_row && (
                   <tr>
                     <td colSpan={5}>
@@ -333,6 +347,7 @@ export default function Transactions() {
           </nav>
         )}
       </section>
+      {details && <TransactionDetailsDialog transaction={details} close={() => setDetails(null)} />}
     </>
   );
 }
