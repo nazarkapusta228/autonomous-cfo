@@ -59,7 +59,7 @@ and SMTP_FROM=accounts@autonomous-cfo.invalid. To show an inbox link when runnin
    Under Investment Agent run the second agent to see the operating cash, reserve and deposit
    proposal. Changing the forecast creates a new decision context.
 3. Under Transactions inspect the bank history, filter categories, correct a payment or
-   resolve an ambiguous invoice. CSV uploads are under Liquidity Agent → Import CSV files.
+   resolve an ambiguous invoice. Open Data → Bank statement to import the example bank CSV. Data also accepts a cash flow plan or invoices in CSV, tabular TXT or JSON (an array of objects). Review column assignments and sample values before replacing a dataset. Export the current data as CSV, TXT, JSON or PDF, or click the uploaded filename for the original. Under Transactions, use Edit row for one payment or all payments of its type, including payments outside the current date filter.
 4. Under Currency Exposure and Tax Payments enter the terms of a simulation. Money market and
    equipment finance enquiries are also available. The dashboard records each decision.
 

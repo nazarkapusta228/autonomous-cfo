@@ -30,7 +30,7 @@ export function AppProvider({ children }) {
     setBusy(true);
     setError('');
     try {
-      const result = await api(path, { ...fields, revision: state.revision });
+      const result = await api(path, { revision: state.revision, ...fields });
       if (reload) setState(await api('workspace'));
       return result;
     } catch (e) {

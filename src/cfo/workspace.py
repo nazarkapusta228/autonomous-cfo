@@ -148,7 +148,7 @@ def snapshot(conn, dsn, row):
             category_totals[name] = category_totals.get(name, Decimal(0)) + Decimal(
                 record["amount_eur"]
             )
-    history = daily_balances(transactions, analysis.starting_balance)
+    history = daily_balances(transactions, analysis.starting_balance) if transactions else []
     foreign = sorted((t for t in visible if t.currency == "CHF"), key=lambda t: t.value_on)
     fx = {
         "booked_chf": str(sum((t.amount for t in foreign), Decimal(0))),
@@ -183,7 +183,17 @@ def snapshot(conn, dsn, row):
         "FROM transactions WHERE import_id=%s",
         (row["import_id"],),
     ).fetchone()
+    names = {
+        r["kind"]: r["filename"]
+        for r in conn.execute(
+            "SELECT kind, filename FROM web_data_files WHERE workspace_id=%s", (row["id"],)
+        )
+    }
     return dict(
+        data_files={
+            f: {"present": bool(row[f]), "filename": names.get(f)}
+            for f in ("statement", "plan", "invoices")
+        },
         statement_info=statement_info,
         uses_statement_projection=not row["plan"],
         revision=row["revision"],

@@ -500,3 +500,15 @@ summary { cursor: pointer; color: var(--accent); }
 @media (max-width: 420px) {
   .auth-card .name-fields { grid-template-columns: 1fr; gap: 1rem; }
 }
+
+.data-tools, .data-map { display: flex; flex-wrap: wrap; align-items: end; gap: .85rem; margin-top: 1rem; }
+.data-map { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(14rem, 100%), 1fr)); align-items: start; }
+.data-tools label, .data-map label { display: grid; gap: .35rem; min-width: 0; max-width: 100%; }
+.data-tools input, .data-tools select, .data-map select, .data-tools .btn { min-height: 42px; box-sizing: border-box; max-width: 100%; }
+.data-tools input, .data-tools select, .data-map select { padding: .5rem; color: var(--text); background: var(--bg-elev); border: 1px solid var(--border); border-radius: 8px; font: inherit; }
+.data-map small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-muted); }
+.data-preview { border-top: 1px solid var(--border); margin-top: 1rem; padding-top: 1rem; }
+.data-panel [role=status] { margin-top: .75rem; }
+.data-tools .btn { align-items: center; justify-content: center; text-decoration: none; }
+.data-original { color: var(--primary); overflow-wrap: anywhere; }
+.data-map input { min-width: 0; padding: .5rem; border-radius: 8px; border: 1px solid var(--border); font: inherit; color: var(--text); background: var(--bg-elev); }

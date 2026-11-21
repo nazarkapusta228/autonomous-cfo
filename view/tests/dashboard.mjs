@@ -114,7 +114,7 @@ import assert from 'node:assert/strict';
       .locator('tbody tr')
       .filter({ has: page.locator('button:enabled') })
       .first();
-    await row.getByRole('button').click();
+    await row.locator('.transaction-category').click();
     await page.getByLabel(/Category for row/).fill('UI test category');
     await click('Save category');
     await page.getByRole('button', { name: 'UI test category', exact: true }).waitFor();
@@ -124,14 +124,16 @@ import assert from 'node:assert/strict';
     assert.equal(s.simulations.length, 4);
     assert.equal(s.assessments.investment.status, 'rejected');
     assert(s.audit.some((x) => x.kind === 'liquidity' && x.event === 'simulated'));
-    await nav('Liquidity Agent');
-    await page.locator('summary', { hasText: 'Import CSV files' }).click();
+    await nav('Data');
     async function csv(label, content) {
       await page.getByLabel(label, { exact: true }).setInputFiles({
         name: 'example.csv',
         mimeType: 'text/csv',
         buffer: Buffer.from(content),
       });
+      const panel = page.locator('.data-panel').filter({has:page.getByRole('heading',{name:label, exact:true})});
+      await panel.getByRole('button',{name:/Replace dataset|Import dataset/}).click();
+      await panel.getByText('Imported. Forecast updated.').waitFor();
     }
     await csv(
       'Bank statement',
@@ -145,6 +147,7 @@ import assert from 'node:assert/strict';
       'Invoices',
       'invoice_id;counterparty;issued_on;due_on;amount_eur\nDEMO-INV;Supplier;2025-05-01;2025-05-01;-25.00',
     );
+    await nav('Liquidity Agent');
     await runForecast();
     await page.getByText(/Resolve the invoice matches/).waitFor();
     await nav('Transactions');

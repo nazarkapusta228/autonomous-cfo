@@ -8,10 +8,8 @@ import RecommendationCard from './RecommendationCard';
 
 function Inputs() {
   const { t: tr } = usePreferences();
-  const { state, busy, submit, setError } = useApp();
+  const { state, busy, submit } = useApp();
   const [settings, setSettings] = useState(state.settings);
-  const [files, setFiles] = useState({});
-  const [remove, setRemove] = useState(false);
   const fields = [
     [tr("Cut-off date"), 'as_of', 'date'],
     [tr("Opening balance before first booking (€)"), 'starting_balance', 'number'],
@@ -20,16 +18,7 @@ function Inputs() {
   ];
   async function run(e) {
     e.preventDefault();
-    try {
-      const payload = { settings };
-      for (const [k, file] of Object.entries(files)) {
-        if (file) payload[k] = await file.text();
-      }
-      if (remove) payload.invoices = '';
-      await submit('forecast', payload);
-    } catch (error) {
-      setError(error.message);
-    }
+    await submit('forecast', {settings});
   }
   return (
     <form className="card mb-4" onSubmit={run}>
@@ -61,32 +50,6 @@ function Inputs() {
           ),
         )}
       </div>
-      <details className="section">
-        <summary>{tr("Import CSV files")}</summary>
-        <p> {tr("Leave a field empty to keep its current file.")} </p>
-        <div className="controls">
-          {[
-            ['statement', tr("Bank statement")],
-            ['plan', tr("Cash flow plan")],
-            ['invoices', tr("Invoices")],
-          ].map(([k, label]) => (
-            <label key={k}>
-              {label}
-              <input
-                type="file"
-                accept=".csv,text/csv"
-                disabled={k === 'invoices' && remove}
-                onChange={(e) => setFiles({ ...files, [k]: e.target.files[0] })}
-              />
-            </label>
-          ))}
-        </div>
-        {state.has_invoices && (
-          <label>
-            <input type="checkbox" checked={remove} onChange={(e) => setRemove(e.target.checked)} />{' '} {tr("Remove imported invoices")} </label>
-        )}
-        <p> {tr("Plan: date,category,amount_eur,description (optional invoice_id). Invoices: invoice_id;counterparty;issued_on;due_on;amount_eur. Use ISO dates and signed EUR amounts.")} </p>
-      </details>
       <button className="btn btn-primary" disabled={busy}>
         {busy ? tr("Working…") : tr("Run forecast")}
       </button>

@@ -1,6 +1,6 @@
 import { usePreferences } from '../context/Preferences';
 import React from 'react';
-import { Settings, LayoutDashboard, Droplets, Coins, Receipt, TrendingUp, ListOrdered } from 'lucide-react';
+import { Database, Settings, LayoutDashboard, Droplets, Coins, Receipt, TrendingUp, ListOrdered } from 'lucide-react';
 
 const NAV = [
   { key: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -9,6 +9,7 @@ const NAV = [
   { key: 'tax', label: 'Tax Payments', icon: Receipt },
   { key: 'investment', label: 'Investment Agent', icon: TrendingUp },
   { key: 'transactions', label: 'Transactions', icon: ListOrdered },
+  { key: 'data', label: 'Data', icon: Database },
   { key: 'settings', label: 'Settings', icon: Settings },
 ];
 

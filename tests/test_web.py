@@ -129,3 +129,73 @@ def test_agent_decision_and_comparison_routes(postgres_url, monkeypatch):
     assert browser.post("/api/agents/liquidity/decision/approve", json=payload).is_success
     assert state(browser)["assessments"]["liquidity"]["status"] == "simulated"
     assert browser.post("/api/agents/liquidity/decision/reject", json=payload).status_code == 422
+
+
+def test_data_files_edits_exports_and_deletion(postgres_url, monkeypatch):
+    import psycopg
+
+    monkeypatch.setenv("DATABASE_URL", postgres_url)
+    owner, guest = client(), client()
+    first = state(owner)
+
+    def save(path, **fields):
+        return owner.post("/api/" + path, json=dict(revision=state(owner)["revision"], **fields))
+
+    filename = "payments.txt"
+    content = (
+        "Account Number\tBooking Date\tTransaction Type\tPayment Reference\tAmount\tCurrency\n"
+        "123\t2025-05-01\trent\tOffice\t-100.99\tEUR\n"
+        "123\t2025-05-02\trent\tOffice\t-101.00\tEUR"
+    )
+    preview = save("data/statement/preview", filename=filename, content=content).json()
+    upload = dict(filename=filename, content=content, mapping=preview["mapping"])
+    assert (
+        guest.post(
+            "/api/data/statement/import", json=dict(revision=first["revision"], **upload)
+        ).status_code
+        == 409
+    )
+    assert save("data/statement/import", **upload).is_success
+    assert state(owner)["statement_info"]["total"] == 2
+    assert save(
+        "payments/edit", source_row=2, column="Amount", value="-20", same_type=True
+    ).is_success
+    assert save(
+        "payments/edit", source_row=2, column="category", value="Office rent", same_type=True
+    ).is_success
+    updated = state(owner)
+    assert {record["category"] for record in updated["statement_rows"]} == {"Office rent"}
+    original = owner.get("/api/data/statement/original", params={"revision": updated["revision"]})
+    assert original.content.decode() == content
+    assert updated["history"][-1]["balance"] == "2460.00"
+    assert updated["analysis"]["forecast"]["opening_balance"] == "2460.00"
+    for fmt in ("csv", "txt", "json", "pdf"):
+        response = owner.get(
+            "/api/data/statement/export", params=dict(format=fmt, revision=updated["revision"])
+        )
+        assert response.is_success
+        if fmt == "pdf":
+            assert response.content.startswith(b"%PDF")
+        else:
+            assert "-20,00" in response.text and "Office rent" in response.text
+    assert save("data/statement/remove").is_success
+    assert state(owner)["history"] == []
+    assert state(guest)["statement_info"]["total"] > 2
+    assert save("data/statement/import", **upload).is_success
+    plan_json = '[{"date":"2025-06-02","category":"rent","amount_eur":-250,"description":"Office"}]'
+    preview = save("data/plan/preview", filename="plan.json", content=plan_json).json()
+    assert save(
+        "data/plan/import", filename="plan.json", content=plan_json, mapping=preview["mapping"]
+    ).is_success
+    assert state(owner)["analysis"]["plan"][0]["amount_eur"] == "-250.00"
+    with psycopg.connect(postgres_url) as conn:
+        scope = conn.execute("SELECT workspace_id FROM web_data_files LIMIT 1").fetchone()[0]
+    assert owner.post("/api/account/delete", json={"password": "test-only-password"}).is_success
+    with psycopg.connect(postgres_url) as conn:
+        assert conn.execute("SELECT count(*) FROM web_data_files").fetchone()[0] == 0
+        assert (
+            conn.execute(
+                "SELECT count(*) FROM statement_imports WHERE scope=%s", (str(scope),)
+            ).fetchone()[0]
+            == 0
+        )

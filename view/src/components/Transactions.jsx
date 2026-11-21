@@ -120,6 +120,44 @@ function EditCategory({ transaction, close, onSaved }) {
   );
 }
 
+const paymentFields = [
+  ['Amount','amount','Amount','Kwota'],
+  ['category','category','Category','Kategoria'],
+  ['Booking Date','booked_on','Booking date','Data księgowania'],
+  ['Value Date','value_on','Value date','Data waluty'],
+  ['Transaction Type','kind','Payment type','Rodzaj płatności'],
+  ['Payment Reference','reference','Reference','Tytuł'],
+  ['Beneficiary/Payer','counterparty','Counterparty','Kontrahent'],
+  ['Currency','currency','Currency','Waluta'],
+  ['Account Number','account','Account number','Numer rachunku'],
+];
+
+function EditPayment({transaction, close}) {
+  const {t} = usePreferences();
+  const {state, submit, busy} = useApp();
+  const [column, setColumn] = useState('Amount');
+  const [value, setValue] = useState(transaction.amount);
+  const [all, setAll] = useState(false);
+  const count = state.statement_rows.filter(r=>r.kind === transaction.kind).length;
+  return <form className="data-tools" onSubmit={async e=>{
+    e.preventDefault();
+    if (all && !window.confirm(t('Apply this value to all matching payments?', 'Zastosować tę wartość do wszystkich pasujących płatności?'))) return;
+    if(await submit('payments/edit', {source_row:transaction.source_row, column, value, same_type:all})) close();
+  }}>
+    <label>{t('Column','Kolumna')}<select value={column} onChange={e=>{
+      const f = paymentFields.find(f=>f[0] === e.target.value);
+      setColumn(f[0]); setValue(transaction[f[1]]);
+    }}>{paymentFields.map(([name,,en,pl])=><option key={name} value={name}>{t(en,pl)}</option>)}</select></label>
+    <label>{t('New value','Nowa wartość')}<input type={column.endsWith('Date')?'date':'text'} value={value} onChange={e=>setValue(e.target.value)} /></label>
+    <label>{t('Apply to','Zastosuj do')}<select value={all?'type':'row'} onChange={e=>setAll(e.target.value==='type')}>
+      <option value="row">{t('This row','Ten wiersz')} #{transaction.source_row}</option>
+      <option value="type">{transaction.kind} ({count})</option>
+    </select></label>
+    <button className="btn btn-primary" disabled={busy}>{t('Save changes','Zapisz zmiany')}</button>
+    <button type="button" className="btn btn-ghost" onClick={close}>{t('Cancel','Anuluj')}</button>
+  </form>;
+}
+
 export default function Transactions() {
   const { t: tr, money: eur, originalMoney } = usePreferences();
   const { state } = useApp();
@@ -203,6 +241,7 @@ export default function Transactions() {
               <th>{tr("Reference")}</th>
               <th>{tr("Counterparty")}</th>
               <th>{tr("Amount")}</th>
+              <th>{tr("Edit","Edytuj")}</th>
             </tr>
           </thead>
           <tbody>
@@ -225,11 +264,12 @@ export default function Transactions() {
                   <td className={Number(t.amount) < 0 ? 'amount-neg' : 'amount-pos'}>
                     {originalMoney(t.amount, t.currency)}
                   </td>
+                  <td><button className="btn btn-ghost" onClick={() => setEditing({...t, editPayment:true})}>{tr("Edit row","Edytuj wiersz")}</button></td>
                 </tr>
                 {editing?.source_row === t.source_row && (
                   <tr>
-                    <td colSpan={5}>
-                      <EditCategory
+                    <td colSpan={6}>
+                      {editing.editPayment ? <EditPayment key={state.revision} transaction={t} close={()=>setEditing(null)} /> : <EditCategory
                         transaction={t}
                         close={() => setEditing(null)}
                         onSaved={(name) => {
@@ -237,7 +277,7 @@ export default function Transactions() {
                           setNotice(tr("Row") + ' ' + t.source_row + ' ' + tr("saved as") + ' ' + name + '.');
                           if (category) setCategory(name);
                         }}
-                      />
+                      />}
                     </td>
                   </tr>
                 )}

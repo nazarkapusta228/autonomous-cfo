@@ -1,4 +1,6 @@
 {
+  "Data": "Dane",
+  "Imports and exports": "Import i eksport",
   "⚠ Human-in-the-loop approval": "Zatwierdzenie przez użytkownika",
   "Approval records this simulation in the workspace audit.": "Zatwierdzenie zapisuje symulację w historii operacji.",
   "Close": "Zamknij",

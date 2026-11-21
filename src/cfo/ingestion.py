@@ -22,7 +22,13 @@ REQUIRED = {
 }
 
 
+def parse_bank_date(value):
+    return datetime.strptime(value, "%Y-%m-%d" if "-" in value else "%d.%m.%y").date()
+
+
 def parse_statement(content: bytes) -> list[Transaction]:
+    if content == b"":
+        return []
     frame = pd.read_csv(
         BytesIO(content), sep=";", dtype=str, keep_default_na=False, encoding="utf-8-sig"
     )
@@ -59,8 +65,8 @@ def parse_statement(content: bytes) -> list[Transaction]:
                 Transaction(
                     source_row=number,
                     account=row["Account Number"],
-                    booked_on=datetime.strptime(row["Booking Date"], "%d.%m.%y").date(),
-                    value_on=datetime.strptime(row["Value Date"], "%d.%m.%y").date(),
+                    booked_on=parse_bank_date(row["Booking Date"]),
+                    value_on=parse_bank_date(row["Value Date"]),
                     kind=row["Transaction Type"],
                     counterparty=row.get("Beneficiary/Payer", ""),
                     reference=row["Payment Reference"],
