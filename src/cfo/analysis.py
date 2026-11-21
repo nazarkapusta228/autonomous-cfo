@@ -1,6 +1,6 @@
 """Prepare the same dated analysis for both agents and the dashboard."""
 
-from datetime import date
+from datetime import date, timedelta
 from decimal import Decimal
 from hashlib import sha256
 
@@ -25,6 +25,28 @@ class Analysis(BaseModel):
     receipt_delays: list[ReceiptDelay]
 
 
+def statement_projection(transactions, as_of, horizon_days):
+    """Repeat the last four weeks of known bookings on the same weekdays."""
+    start = as_of - timedelta(days=27)
+    end = as_of + timedelta(days=horizon_days)
+    flows = []
+    for entry in transactions:
+        if entry.booked_on > as_of or not start <= entry.value_on <= as_of:
+            continue
+        day = entry.value_on + timedelta(weeks=4)
+        while day <= end:
+            flows.append(
+                PlannedCashFlow(
+                    date=day,
+                    category=entry.kind,
+                    amount_eur=entry.amount_eur,
+                    description=f"{entry.reference} ({entry.value_on})",
+                )
+            )
+            day += timedelta(weeks=4)
+    return flows
+
+
 def prepare_analysis(
     statement: bytes,
     plan: bytes,
@@ -38,7 +60,11 @@ def prepare_analysis(
 ) -> Analysis:
     """Link plan rows by invoice_id; unlinked rows are independent assumptions."""
     transactions = parse_statement(statement)
-    assumptions = parse_cash_flow_plan(plan)
+    assumptions = (
+        parse_cash_flow_plan(plan)
+        if plan
+        else statement_projection(transactions, as_of, horizon_days)
+    )
     invoice_rows = parse_invoices(invoices) if invoices is not None else []
     reconciliation = reconcile_invoices(
         transactions, invoice_rows, as_of=as_of, confirmed=confirmed

@@ -1,0 +1,58 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cfo-mail-preview
+spec:
+  replicas: 1
+  selector:
+    matchLabels: {app: cfo-mail-preview}
+  template:
+    metadata:
+      labels: {app: cfo-mail-preview}
+    spec:
+      automountServiceAccountToken: false
+      containers:
+        - name: mailpit
+          image: docker.io/axllent/mailpit:v1.24.2
+          env:
+            - {name: MP_DATABASE, value: /tmp/mailpit.db}
+            - {name: MP_MAX_AGE, value: 1h}
+          readinessProbe:
+            tcpSocket: {port: 1025}
+          resources:
+            requests: {cpu: 10m, memory: 32Mi}
+            limits: {cpu: 100m, memory: 96Mi}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: cfo-mail-preview
+spec:
+  selector: {app: cfo-mail-preview}
+  ports:
+    - {name: smtp, port: 1025, targetPort: 1025}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: cfo-mail-preview
+spec:
+  podSelector:
+    matchLabels: {app: cfo-mail-preview}
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels: {app: autonomous-cfo}
+      ports:
+        - {protocol: TCP, port: 1025}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cfo-mail-preview
+data:
+  SMTP_HOST: cfo-mail-preview
+  SMTP_PORT: "1025"
+  SMTP_TLS: plain
+  SMTP_FROM: accounts@autonomous-cfo.invalid

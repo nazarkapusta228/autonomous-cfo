@@ -6,15 +6,15 @@ from cfo.analysis import Analysis, prepare_analysis
 
 DATA = Path(__file__).resolve().parents[1] / "data/sample"
 STATEMENT = (DATA / "pizzeria-amalfi-2025.csv").read_bytes()
-PLAN = (DATA / "pizzeria-amalfi-liquidity-plan.csv").read_bytes()
 OPTIONS = {"as_of": date(2025, 5, 31), "starting_balance": Decimal("2500")}
 
 
 def test_demo_links_first_at_risk_payment_to_baseline():
-    run = prepare_analysis(STATEMENT, PLAN, **OPTIONS)
-    assert run.forecast.funding_needed == Decimal("10843.69")
+    run = prepare_analysis(STATEMENT, b"", as_of=OPTIONS["as_of"], starting_balance=Decimal(0))
+    assert run.forecast.funding_needed == Decimal("493.69")
     assert [(x.date, x.amount_eur) for x in run.payments_at_risk] == [
-        (date(2025, 6, 13), Decimal("-3500.00"))
+        (date(2025, 6, 26), Decimal("-302.44")),
+        (date(2025, 6, 26), Decimal("-625.33")),
     ]
     assert run == Analysis.model_validate_json(run.model_dump_json())
 
@@ -41,7 +41,9 @@ def test_credit_counterfactual_repayment_is_not_operating_income():
     from cfo.agents.policy import proposal_fields
     from cfo.scenarios import SettlementTerms, compare_scenarios
 
-    forecast = prepare_analysis(STATEMENT, PLAN, **OPTIONS).forecast
+    forecast = prepare_analysis(
+        STATEMENT, b"", as_of=OPTIONS["as_of"], starting_balance=Decimal(0)
+    ).forecast
     proposal = AgentRecommendation(
         **proposal_fields("liquidity", forecast), explanation="Scenario", risks=["Funding risk"]
     )
@@ -49,6 +51,6 @@ def test_credit_counterfactual_repayment_is_not_operating_income():
         forecast, proposal, SettlementTerms(settles_on=date(2025, 7, 15), interest_eur="100.00")
     )
     adjusted = {p.day: p.balance for p in preview.with_action}
-    assert adjusted[date(2025, 6, 30)] == 0
+    assert adjusted[date(2025, 6, 26)] == Decimal("59.18")
     assert adjusted[date(2025, 7, 15)] == forecast.daily_balances[-1].balance - Decimal(100)
     assert preview.outstanding_principal == 0

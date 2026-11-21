@@ -17,12 +17,11 @@ from cfo.workflow import decide, get_recommendation
 
 DATA = Path(__file__).parents[1] / "data/sample"
 STATEMENT = (DATA / "pizzeria-amalfi-2025.csv").read_bytes()
-PLAN = (DATA / "pizzeria-amalfi-liquidity-plan.csv").read_bytes()
 
 
 def demo(opening):
     return prepare_analysis(
-        STATEMENT, PLAN, as_of=date(2025, 5, 31), starting_balance=Decimal(opening)
+        STATEMENT, b"", as_of=date(2025, 5, 31), starting_balance=Decimal(opening)
     )
 
 
@@ -48,7 +47,7 @@ def explained(monkeypatch):
 
 def test_approval_is_atomic_and_idempotent_on_concurrent_clicks(postgres_url, explained):
     settings = Settings(_env_file=None, database_url=postgres_url)
-    analysis, key = demo("2500"), uuid4()
+    analysis, key = demo("0"), uuid4()
     item = assess(settings, analysis, "liquidity", request_id=key)
     with ThreadPoolExecutor(max_workers=3) as pool:
         saved = list(
@@ -68,7 +67,7 @@ def test_approval_is_atomic_and_idempotent_on_concurrent_clicks(postgres_url, ex
     with psycopg.connect(postgres_url) as conn:
         assert conn.execute(
             "SELECT amount_eur, planned_on FROM simulated_applications"
-        ).fetchall() == [(Decimal("10843.69"), date(2025, 6, 13))]
+        ).fetchall() == [(Decimal("493.69"), date(2025, 5, 31))]
         with pytest.raises(psycopg.Error, match="immutable"):
             conn.execute("UPDATE recommendations SET scenario='{}' WHERE id=%s", (item.id,))
 
@@ -82,7 +81,7 @@ def test_rejected_investment_and_hold_never_create_applications(postgres_url, ex
     assert decide(postgres_url, surplus.id, "reject", actor="owner") == saved
     with pytest.raises(ValueError, match="rejected"):
         decide(postgres_url, surplus.id, "approve", actor="owner")
-    hold = assess(settings, demo("2500"), "investment", request_id=uuid4())
+    hold = assess(settings, demo("0"), "investment", request_id=uuid4())
     assert hold.status == "no_action"
     with pytest.raises(ValueError, match="no_action"):
         decide(postgres_url, hold.id, "approve", actor="owner")
@@ -90,7 +89,7 @@ def test_rejected_investment_and_hold_never_create_applications(postgres_url, ex
 
 def test_failure_rolls_back_approval_and_audit(postgres_url, explained):
     settings = Settings(_env_file=None, database_url=postgres_url)
-    item = assess(settings, demo("2500"), "liquidity", request_id=uuid4())
+    item = assess(settings, demo("0"), "liquidity", request_id=uuid4())
     with psycopg.connect(postgres_url) as conn:
         conn.execute("ALTER TABLE simulated_applications ADD CHECK (amount_eur < 1)")
     with pytest.raises(psycopg.errors.CheckViolation):

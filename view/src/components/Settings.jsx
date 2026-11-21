@@ -42,12 +42,3 @@ export default function Settings() {
     </section>
   </div>;
 }
-
-export function Profile() {
-  const { t } = usePreferences();
-  return <div className="settings-grid"><section className="card"><h3>{t('Personal information','Dane osobowe')}</h3>
-    {[[t('First name','Imię'), 'Alex'],[t('Last name','Nazwisko'), 'Morgan'],[t('Email','Adres e-mail'),'alex.morgan@example.com']].map(([name,value]) => <label key={value} className="setting-row">{name}<input disabled value={value}/></label>)}
-    </section><section className="card"><h3>{t('Account security','Bezpieczeństwo konta')}</h3>
-    <p className="card-sub">{t('Account changes will be available after sign-in is enabled.', 'Zmiany danych będą dostępne po uruchomieniu logowania.')}</p>
-    <div className="controls"><button className="btn btn-ghost" disabled>{t('Verify email','Potwierdź adres e-mail')}</button><button className="btn btn-ghost" disabled>{t('Reset password','Zresetuj hasło')}</button></div></section></div>;
-}

@@ -1,4 +1,5 @@
 import { chromium } from 'playwright';
+import { exerciseAccount } from './account.mjs';
 import assert from 'node:assert/strict';
 (async () => {
   const browser = await chromium.launch({
@@ -22,7 +23,18 @@ import assert from 'node:assert/strict';
     const nav = (label) =>
       page.locator('nav').getByRole('button', { name: label, exact: true }).click();
     await page.goto(process.env.CFO_URL || 'http://127.0.0.1:8080', { waitUntil: 'networkidle' });
-    await page.getByText('€10,843.69', { exact: true }).waitFor();
+    const deleteTestAccount = await exerciseAccount(page);
+    async function runForecast() {
+      const refreshed = page.waitForResponse((r) => r.url().endsWith('/api/workspace') && r.ok());
+      await click('Run forecast');
+      await (await refreshed).finished();
+      await page.getByRole('button', { name: 'Run forecast', exact: true }).waitFor();
+    }
+    await nav('Liquidity Agent');
+    await page.getByLabel('Opening balance before first booking (€)').fill('0');
+    await runForecast();
+    await nav('Dashboard');
+    await page.getByText('€493.69', { exact: true }).first().waitFor();
     assert.equal(await page.getByText('System health', { exact: true }).count(), 0);
     assert.equal(await page.getByText('Liquidity decision', { exact: true }).count(), 0);
     await page.locator('.chart-alert').filter({ hasText: 'First below zero' }).first().waitFor();
@@ -38,13 +50,13 @@ import assert from 'node:assert/strict';
     await click('Close');
     await nav('Liquidity Agent');
     await click('Last statement date');
-    await click('Run forecast');
+    await runForecast();
     await nav('Transactions');
     await click('Full statement');
     await page.getByText(/1125 matching payments/).waitFor();
     await nav('Liquidity Agent');
     await page.getByLabel('Cut-off date', { exact: true }).fill('2025-05-31');
-    await click('Run forecast');
+    await runForecast();
     const risk = page.locator('section.card').filter({ hasText: 'Payments at risk' }).last();
     await risk.locator('tbody .payment-bar').first().waitFor();
     await page.getByRole('columnheader', { name: 'Source' }).waitFor();
@@ -61,8 +73,8 @@ import assert from 'node:assert/strict';
     console.log('credit proposal, approval, cash scenario, reload verified');
     await nav('Liquidity Agent');
     await page.getByLabel('Opening balance before first booking (€)').fill('25000');
-    await click('Run forecast');
-    await page.getByText(/Minimum €11,656.31/).waitFor();
+    await runForecast();
+    assert.equal((await state()).analysis.forecast.minimum_balance, '24565.49');
     await nav('Investment Agent');
     await click('Run investment agent');
     await page.getByText(/Term deposit ·/).waitFor();
@@ -98,7 +110,10 @@ import assert from 'node:assert/strict';
     await click('Full statement');
     assert.equal(await page.getByLabel('Chart end date').inputValue(), '2025-12-31');
     await page.getByLabel('Chart end date').fill('2025-05-31');
-    const row = page.locator('tbody tr').filter({ has: page.locator('button:enabled') }).first();
+    const row = page
+      .locator('tbody tr')
+      .filter({ has: page.locator('button:enabled') })
+      .first();
     await row.getByRole('button').click();
     await page.getByLabel(/Category for row/).fill('UI test category');
     await click('Save category');
@@ -130,7 +145,7 @@ import assert from 'node:assert/strict';
       'Invoices',
       'invoice_id;counterparty;issued_on;due_on;amount_eur\nDEMO-INV;Supplier;2025-05-01;2025-05-01;-25.00',
     );
-    await click('Run forecast');
+    await runForecast();
     await page.getByText(/Resolve the invoice matches/).waitFor();
     await nav('Transactions');
     await page.getByLabel('Match invoice DEMO-INV', { exact: true }).selectOption('2');
@@ -141,6 +156,7 @@ import assert from 'node:assert/strict';
     await page.setViewportSize({ width: 390, height: 844 });
     await nav('Currency Exposure');
     assert(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth));
+    await deleteTestAccount();
     assert.deepEqual(errors, []);
     console.log('transaction drill-down, persistent audit and mobile verified');
   } finally {

@@ -38,7 +38,7 @@ def sample():
     base = Path("data/sample")
     return (
         (base / "pizzeria-amalfi-2025.csv").read_bytes(),
-        (base / "pizzeria-amalfi-liquidity-plan.csv").read_bytes(),
+        b"",
     )
 
 
@@ -185,6 +185,7 @@ def snapshot(conn, dsn, row):
     ).fetchone()
     return dict(
         statement_info=statement_info,
+        uses_statement_projection=not row["plan"],
         revision=row["revision"],
         settings=row["settings"],
         analysis=analysis.model_dump(mode="json"),

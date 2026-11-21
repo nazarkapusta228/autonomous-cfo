@@ -16,6 +16,9 @@ export async function api(path, body) {
       : data.detail;
     const error = new Error(detail || 'Request failed (HTTP ' + response.status + ')');
     error.status = response.status;
+    if (response.status === 401 && !path.startsWith('account/')) {
+      window.dispatchEvent(new Event('cfo-session-expired'));
+    }
     throw error;
   }
   return response.json();

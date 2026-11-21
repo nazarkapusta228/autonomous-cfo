@@ -9,6 +9,7 @@ import TaxAgent from './components/TaxAgent';
 import InvestmentAgent from './components/InvestmentAgent';
 import Transactions from './components/Transactions';
 
+import {AccountGate} from './components/Account';
 import Settings from './components/Settings';
 import { Preferences } from './context/Preferences';
 import { StatementPeriod, PeriodPicker } from './context/StatementPeriod';
@@ -52,7 +53,7 @@ export default function App() {
   const Page = PAGES[active].component;
 
   return (
-    <Preferences><AppProvider><StatementPeriod>
+    <Preferences><AccountGate><AppProvider><StatementPeriod>
       <div className="app-shell">
         <Sidebar active={active} onNavigate={setActive} />
         <div className="main-area">
@@ -63,6 +64,6 @@ export default function App() {
           </div>
         </div>
       </div>
-    </StatementPeriod></AppProvider></Preferences>
+    </StatementPeriod></AppProvider></AccountGate></Preferences>
   );
 }

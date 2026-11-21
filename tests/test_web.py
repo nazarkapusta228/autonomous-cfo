@@ -1,12 +1,27 @@
 """HTTP contracts for the React workspace and its PostgreSQL boundaries."""
 
+from unittest.mock import patch
+from uuid import uuid4
+
 from fastapi.testclient import TestClient
 
 from cfo.web import app
 
 
 def client():
-    return TestClient(app, headers={"X-CFO-Client": "dashboard"})
+    browser = TestClient(app, headers={"X-CFO-Client": "dashboard"})
+    credentials = {"email": f"{uuid4()}@example.test", "password": "test-only-password"}
+    with patch("cfo.accounts.send_code") as mail:
+        assert browser.post(
+            "/api/account/signup", json=dict(credentials, first_name="A", last_name="B")
+        ).is_success
+    code = mail.call_args.args[-1]
+    assert browser.post(
+        "/api/account/confirm",
+        json=dict(purpose="activate", code=code, password=credentials["password"]),
+    ).is_success
+    assert browser.post("/api/account/login", json=credentials).is_success
+    return browser
 
 
 def state(browser):
@@ -20,7 +35,7 @@ def test_workspace_isolation_uploads_and_stale_edits(postgres_url, monkeypatch):
     owner, guest = client(), client()
     first, other = state(owner), state(guest)
     assert first["revision"] != other["revision"]
-    assert first["analysis"]["forecast"]["funding_needed"] == "10843.69"
+    assert first["analysis"]["forecast"]["funding_needed"] == "0.00"
     item = first["transactions"][0]
     edit = dict(
         revision=first["revision"],
@@ -96,6 +111,13 @@ def test_agent_decision_and_comparison_routes(postgres_url, monkeypatch):
         ),
     )
     browser = client()
+    initial = state(browser)
+    assert browser.post(
+        "/api/forecast",
+        json=dict(
+            revision=initial["revision"], settings=dict(initial["settings"], starting_balance="0")
+        ),
+    ).is_success
     payload = {"revision": state(browser)["revision"]}
     response = browser.post("/api/agents/liquidity", json=payload)
     assert response.is_success, response.text

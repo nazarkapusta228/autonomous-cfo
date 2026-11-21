@@ -32,43 +32,13 @@ Project Card залишено незаповненою: назва команд�
 задавати сценарієм, а не підглядати в майбутні операції CSV.
 Розрахунки історії використовують value date і заповнюють дні без операцій.
 
-## Демо-прогноз ліквідності
+## Базовий прогноз
 
-Окремий `data/sample/pizzeria-amalfi-liquidity-plan.csv` містить припущення про
-майбутні надходження й витрати, зокрема закриття з 9 до 29 червня включно.
-Суми в EUR, витрати від'ємні. План працює на горизонті з 1 червня до 15 липня.
-
-```python
-from datetime import date
-from decimal import Decimal
-from pathlib import Path
-
-from cfo.finance import balance_as_of, build_liquidity_forecast
-from cfo.ingestion import parse_cash_flow_plan, parse_statement
-
-data = Path("data/sample")
-as_of = date(2025, 5, 31)
-transactions = parse_statement((data / "pizzeria-amalfi-2025.csv").read_bytes())
-planned_flows = parse_cash_flow_plan((data / "pizzeria-amalfi-liquidity-plan.csv").read_bytes())
-forecast = build_liquidity_forecast(
-    as_of=as_of,
-    opening_balance=balance_as_of(transactions, Decimal("2500.00"), as_of),
-    planned_flows=planned_flows,
-)
-```
-
-У результаті `opening_balance` — залишок на кінець дати зрізу (EUR 2 006,31),
-`daily_balances` — 45 майбутніх залишків. Перший дефіцит прогнозується 13 червня,
-мінімум становить −10 843,69 EUR 30 червня. За нульового резерву прогнозована
-потреба у фінансуванні — 10 843,69 EUR до 13 червня.
-
-`first_deficit_on` і `minimum_on` стосуються майбутніх денних залишків.
-`funding_needed` враховує також залишок на дату зрізу, а `funding_needed_by`
-показує першу дату нижче резерву. `drivers` містить заплановані витрати
-в дні з від'ємним чистим потоком до прогнозного мінімуму включно, коли
-потрібне фінансування і прогноз падає нижче стартового залишку.
-Для агента або аудиту грошові значення можна серіалізувати рядками через
-`forecast.model_dump(mode="json")`.
+Застосунок читає повну банківську виписку. Для базового прогнозу він бере платежі,
+відомі на дату зрізу, із датою валютування протягом останніх 28 днів та повторює
+їх кожні чотири тижні до кінця горизонту. Це оцінка за історією. Разові витрати,
+закриття закладу та сезонні зміни потребують окремого плану користувача.
+Імпорт явного плану замінює базову оцінку. Розрахунок також враховує відкриті фактури.
 
 ## Зберігання виписок
 

@@ -10,3 +10,9 @@ class Settings(BaseSettings):
     llm_model: str = "Qwen/Qwen2.5-7B-Instruct"
     llm_api_key: SecretStr = SecretStr("")
     llm_timeout_seconds: float = Field(default=60, gt=0, le=300)
+    smtp_host: str = ""
+    smtp_port: int = 587
+    smtp_tls: str = "starttls"
+    smtp_from: str = ""
+    smtp_username: str = ""
+    smtp_password: SecretStr = SecretStr("")

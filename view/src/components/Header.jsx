@@ -1,7 +1,7 @@
 import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { X } from 'lucide-react';
 import { usePreferences } from '../context/Preferences';
-import { Profile } from './Settings';
+import { Profile,useAccount } from './Account';
 
 function Flag({ language }) {
   return <svg aria-hidden="true" viewBox="0 0 60 36" width="24" height="15">
@@ -18,6 +18,7 @@ function Flag({ language }) {
 }
 
 export default function Header({ title, subtitle }) {
+  const {user}=useAccount();
   const { t, prefs, update } = usePreferences();
   const [mode, setMode] = useState(null);
   const panel = useRef(null);
@@ -69,11 +70,12 @@ export default function Header({ title, subtitle }) {
       </div>
       <div className="profile-anchor" ref={panel}
         onPointerEnter={e => { if (e.pointerType === 'mouse') setMode(previous => previous || 'hover'); }}
+        onFocusCapture={e=>{if(e.target.closest('.profile-sheet')) setMode('pinned');}}
         onPointerLeave={() => setMode(previous => previous === 'hover' ? null : previous)}
         onBlur={e => { if (e.relatedTarget && !e.currentTarget.contains(e.relatedTarget)) setMode(null); }}>
         <button ref={trigger} type="button" className="user-chip" aria-expanded={Boolean(mode)}
           aria-controls="account-widget" onClick={() => setMode(previous => previous === 'pinned' ? null : 'pinned')}>
-          <span className="user-avatar">AM</span><span>Alex Morgan<small>{t('My profile','Mój profil')}</small></span>
+          <span className="user-avatar">{Array.from(user.first_name)[0]}{Array.from(user.last_name)[0]}</span><span>{user.first_name} {user.last_name}<small>{t('My profile','Mój profil')}</small></span>
         </button>
         {mode && <div id="account-widget" className="profile-popover">
           <section aria-labelledby="profile-title" className="profile-sheet">

@@ -95,6 +95,7 @@ function Inputs() {
 }
 
 function FlowTable({ flows, risk = false, showSource = false }) {
+  const {state}=useApp();
   const { t: tr, money: eur } = usePreferences();
   const largest = flows.reduce((max, flow) => Math.max(max, Math.abs(Number(flow.amount_eur))), 0);
   return (
@@ -115,7 +116,7 @@ function FlowTable({ flows, risk = false, showSource = false }) {
             <td>{flow.description}</td>
             <td>{flow.category}</td>
             {showSource && (
-              <td>{flow.invoice_id ? tr("Invoice") + ' ' + flow.invoice_id : tr("Cash flow plan")}</td>
+              <td>{flow.invoice_id ? tr("Invoice") + ' ' + flow.invoice_id : state.uses_statement_projection ? tr("Statement projection","Prognoza z wyciągu") : tr("Cash flow plan")}</td>
             )}
             <td
               className={'numeric ' + (Number(flow.amount_eur) < 0 ? 'amount-neg' : 'amount-pos')}
@@ -243,7 +244,7 @@ export default function LiquidityAgent() {
       </section>
       <section className="card">
         <div className="card-title">{tr("Planned payments and income")}</div>
-        <p className="card-sub"> {tr("Expected movements in this forecast come from the cash flow plan CSV and eligible outstanding invoices.")} </p>
+        <p className="card-sub"> {state.uses_statement_projection ? tr("The baseline repeats known payments from the last four weeks every 28 days. Outstanding invoices are added separately.", "Prognoza powtarza co 28 dni operacje z ostatnich czterech tygodni. Nierozliczone faktury są doliczane osobno.") : tr("Expected movements in this forecast come from the cash flow plan CSV and eligible outstanding invoices.")} </p>
         {a.plan.length ? (
           <FlowTable flows={a.plan} showSource />
         ) : (

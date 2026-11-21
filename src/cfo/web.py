@@ -1,6 +1,5 @@
 """Same-origin React dashboard and PostgreSQL-backed CFO API."""
 
-import os
 from calendar import monthrange
 from collections.abc import Iterator
 from contextlib import contextmanager
@@ -12,12 +11,14 @@ from uuid import UUID
 
 import httpx
 import psycopg
-from fastapi import FastAPI, HTTPException, Query, Request, Response
+from fastapi import FastAPI, HTTPException, Query, Request
+from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 from psycopg.types.json import Jsonb
 from pydantic import BaseModel, ConfigDict, Field
 
+from cfo import accounts
 from cfo import workspace as ws
 from cfo.agent_types import Role
 from cfo.config import Settings
@@ -30,7 +31,7 @@ from cfo.service import assess, database_dsn
 from cfo.workflow import Decision, decide, find_by_request_id
 
 app = FastAPI(title="Autonomous CFO")
-COOKIE = "cfo_workspace"
+app.include_router(accounts.router)
 MAX_BODY = 4 * 1024 * 1024
 
 
@@ -49,6 +50,15 @@ async def api_access(request: Request, call_next):
     return await call_next(request)
 
 
+@app.exception_handler(RequestValidationError)
+async def invalid_request(request, exc):
+    # Field validation responses must not echo credentials or verification codes.
+    return JSONResponse(
+        {"detail": [{"loc": error["loc"], "msg": error["msg"]} for error in exc.errors()]},
+        status_code=422,
+    )
+
+
 @app.exception_handler(ValueError)
 async def invalid_input(request, exc):
     if isinstance(exc, ModelError):
@@ -59,13 +69,6 @@ async def invalid_input(request, exc):
 @app.exception_handler(psycopg.OperationalError)
 async def database_unavailable(request, exc):
     return JSONResponse({"detail": "PostgreSQL is unavailable"}, status_code=503)
-
-
-def workspace_id(request):
-    try:
-        return UUID(request.cookies.get(COOKIE, ""))
-    except ValueError:
-        return None
 
 
 class Change(BaseModel):
@@ -108,7 +111,7 @@ class Simulation(Change):
 def current(request, revision, *, lock=True) -> Iterator:
     dsn = database_dsn(Settings())
     with ws.connection(dsn) as conn:
-        row = ws.lookup(conn, workspace_id(request), lock=lock)
+        row = ws.lookup(conn, accounts.current_user(conn, request)["workspace_id"], lock=lock)
         if not row or row["revision"] != revision:
             raise HTTPException(409, "Forecast changed. Refresh the workspace and try again.")
         yield conn, dsn, row
@@ -122,7 +125,7 @@ def live():
 @app.get("/api/ready")
 def ready():
     with ws.connection(database_dsn(Settings())) as conn:
-        conn.execute("SELECT revision FROM web_workspaces LIMIT 0")
+        conn.execute("SELECT workspace_id FROM cfo_users LIMIT 0")
     return {"db": "ready"}
 
 
@@ -150,21 +153,11 @@ def health():
 
 
 @app.get("/api/workspace")
-def workspace(request: Request, response: Response):
+def workspace(request: Request):
     dsn = database_dsn(Settings())
     with ws.connection(dsn) as conn:
-        row = ws.lookup(conn, workspace_id(request), lock=True)
-        if not row:
-            key = ws.create_workspace(conn, dsn)
-            response.set_cookie(
-                COOKIE,
-                str(key),
-                httponly=True,
-                samesite="strict",
-                secure=os.getenv("CFO_SECURE_COOKIE") == "1",
-                max_age=30 * 86400,
-            )
-            row = ws.lookup(conn, key)
+        user = accounts.current_user(conn, request)
+        row = ws.lookup(conn, user["workspace_id"])
         return ws.snapshot(conn, dsn, row)
 
 
@@ -243,7 +236,7 @@ def agent(request: Request, role: Role, body: Change):
     with current(request, body.revision, lock=False) as (_, dsn, row):
         analysis = ws.analyse(dsn, row)
         request_id = row[role + "_request"]
-    saved = assess(Settings(), analysis, role, request_id=request_id)
+        saved = assess(Settings(), analysis, role, request_id=request_id)
     return {"id": saved.id}
 
 

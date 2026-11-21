@@ -4,12 +4,12 @@ from pathlib import Path
 
 import pytest
 
+from cfo.analysis import statement_projection
 from cfo.finance import balance_as_of, build_liquidity_forecast, daily_balances, validate_proposal
 from cfo.ingestion import parse_cash_flow_plan, parse_statement
 from cfo.models import ForecastPoint, PlannedCashFlow
 
 SAMPLE = Path(__file__).parents[1] / "data/sample/pizzeria-amalfi-2025.csv"
-PLAN = SAMPLE.with_name("pizzeria-amalfi-liquidity-plan.csv")
 CUTOFF = date(2025, 5, 31)
 
 
@@ -71,18 +71,18 @@ def test_demo_forecast_uses_only_history_known_at_cutoff():
     forecast = build_liquidity_forecast(
         as_of=CUTOFF,
         opening_balance=cutoff_balance,
-        planned_flows=parse_cash_flow_plan(PLAN.read_bytes()),
+        planned_flows=statement_projection(transactions, CUTOFF, 45),
     )
     assert len(forecast.daily_balances) == 45
     assert forecast.daily_balances[0].day == date(2025, 6, 1)
-    assert forecast.daily_balances[0].balance == cutoff_balance
+    assert forecast.daily_balances[0].balance == Decimal("2325.27")
     assert forecast.daily_balances[-1].day == date(2025, 7, 15)
-    assert forecast.daily_balances[-1].balance == Decimal("2956.31")
-    assert forecast.first_deficit_on == forecast.funding_needed_by == date(2025, 6, 13)
-    assert forecast.minimum_on == date(2025, 6, 30)
-    assert forecast.minimum_balance == Decimal("-10843.69")
-    assert forecast.funding_needed == Decimal("10843.69")
-    assert "payroll" in {flow.category for flow in forecast.drivers}
+    assert forecast.daily_balances[-1].balance == Decimal("10722.88")
+    assert forecast.minimum_balance == Decimal("2065.49")
+    assert forecast.funding_needed == 0
+    assert statement_projection(historical, CUTOFF, 45) == statement_projection(
+        transactions, CUTOFF, 45
+    )
 
 
 def test_forecast_rolls_up_same_day_flows_and_keeps_first_date_for_tied_minimum():

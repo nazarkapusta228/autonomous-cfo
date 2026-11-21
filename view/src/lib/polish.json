@@ -259,5 +259,12 @@
   "SALARY PAYMENT": "Wypłata wynagrodzenia",
   "TAX OFFICE TRANSFER": "Przelew podatkowy",
   "RENT PAYMENT": "Opłata czynszowa",
-  "INTERNATIONAL WIRE TRANSFER": "Przelew zagraniczny"
+  "INTERNATIONAL WIRE TRANSFER": "Przelew zagraniczny",
+  "Incorrect credentials or unverified email": "Niepoprawne dane logowania lub niepotwierdzony adres e-mail.",
+  "Please sign in": "Zaloguj się.",
+  "Too many attempts. Try again in ten minutes.": "Zbyt wiele prób. Spróbuj ponownie za dziesięć minut.",
+  "Incorrect password": "Niepoprawne hasło.",
+  "Invalid or expired code": "Kod jest niepoprawny lub wygasł.",
+  "Email delivery is unavailable": "Wysyłka wiadomości e-mail jest niedostępna.",
+  "Email address is unavailable": "Ten adres e-mail jest niedostępny."
 }

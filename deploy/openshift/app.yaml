@@ -23,6 +23,12 @@ spec:
             - name: CFO_SECURE_COOKIE
               value: "1"
           envFrom:
+            - configMapRef:
+                name: cfo-mail-preview
+                optional: true
+            - secretRef:
+                name: cfo-mail-delivery
+                optional: true
             - secretRef:
                 name: cfo-settings
           resources:

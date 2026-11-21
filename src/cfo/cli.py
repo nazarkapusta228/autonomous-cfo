@@ -28,7 +28,7 @@ def main() -> int:
     for name in ("forecast", "run"):
         cmd = commands.add_parser(name)
         cmd.add_argument("--statement", type=Path, default=DATA / "pizzeria-amalfi-2025.csv")
-        cmd.add_argument("--plan", type=Path, default=DATA / "pizzeria-amalfi-liquidity-plan.csv")
+        cmd.add_argument("--plan", type=Path)
         cmd.add_argument("--invoices", type=Path)
         cmd.add_argument("--as-of", type=date.fromisoformat, default=date(2025, 5, 31))
         cmd.add_argument("--opening", type=Decimal, default=Decimal("2500"))
@@ -62,7 +62,7 @@ def main() -> int:
                     )
             analysis = prepare_analysis(
                 statement,
-                args.plan.read_bytes(),
+                args.plan.read_bytes() if args.plan else b"",
                 as_of=args.as_of,
                 starting_balance=args.opening,
                 horizon_days=args.days,

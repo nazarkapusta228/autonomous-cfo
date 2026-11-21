@@ -457,3 +457,17 @@ summary { cursor: pointer; color: var(--accent); }
 .enquiry-pair .card { padding: clamp(1rem, 2vw, 1.75rem); }
 .rec-block > p + button, details.section + .btn { margin-top: .75rem; }
 .date-shortcuts:empty { display: none; }
+
+.pagination { margin-top: 1.5rem; }
+.auth-layout { min-height: 100dvh; display: grid; place-items: center; padding: 1.25rem; background: var(--bg); }
+.auth-card { width: min(100%, 29rem); padding: clamp(1.25rem, 4vw, 2.25rem); }
+.auth-card header, .auth-card nav, .profile-actions { display: flex; align-items: center; flex-wrap: wrap; gap: .6rem; }
+.auth-card header { justify-content: space-between; color: var(--primary); }
+.auth-card h1 { font-size: 1.8rem; margin: 1.8rem 0 1.2rem; }
+.auth-card nav { border-top: 1px solid var(--border); padding-top: 1rem; margin-top: 1.2rem; }
+.account-form, .account-form label { display: grid; gap: .65rem; }
+.account-form label { font-size: .9rem; gap: .3rem; }
+.account-form input { width: 100%; min-width: 0; padding: .65rem; background: var(--bg-elev); border: 1px solid var(--border); border-radius: 8px; color: var(--text); font: inherit; }
+.name-fields { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: .6rem; }
+.auth-card [role=status], .auth-card [role=alert] { margin-top: .7rem; }
+.account-form [role=alert], .auth-card [role=alert] { color: var(--danger); }

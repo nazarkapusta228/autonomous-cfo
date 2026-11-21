@@ -32,10 +32,29 @@ In PyCharm use module `uvicorn`, arguments `cfo.web:app --port 8080` and the rep
 as the working directory. For live React edits run `npm run dev --prefix view` alongside
 FastAPI and open http://127.0.0.1:5173. API documentation is available at `/docs`.
 
+## Accounts and email
+
+Apply the SQL migrations before starting FastAPI. Sign up with your name, email and password,
+then enter the emailed code and your signup password. Codes expire after 20 minutes.
+A verified account owns one workspace across browsers. Its HTTP-only session lasts 30 days.
+Password resets revoke all sessions. My profile supports a verified email change and
+permanent account deletion, including that account’s imported statements and decisions.
+
+For delivery to personal addresses, set SMTP_HOST, SMTP_PORT, SMTP_TLS (starttls or implicit),
+SMTP_FROM, SMTP_USERNAME and SMTP_PASSWORD in the optional OpenShift Secret
+`cfo-mail-delivery` or in your local .env. Use an address authorized by your mail provider.
+
+For team testing, `oc apply -n autonomous-cfo -f deploy/openshift/mail-preview.yaml`
+creates a private Mailpit mailbox and the matching ConfigMap. Team members can open
+the mailbox at http://localhost:8025 after running
+`oc -n autonomous-cfo port-forward deployment/cfo-mail-preview 8025:8025`.
+All messages sent to this preview stay in the sandbox. For a local app connected to it,
+also forward 1025:1025 and set SMTP_HOST=localhost, SMTP_PORT=1025, SMTP_TLS=plain
+and SMTP_FROM=accounts@autonomous-cfo.invalid.
+
 ## Walk through the demo
 
-1. Review the Dashboard forecast, then open Liquidity Agent and run the agent. The supplied assumptions give a shortfall of
-   €10,843.69 by 13 June 2025. Compare the two balance curves, then approve or reject.
+1. Review the Dashboard forecast, then open Liquidity Agent and run the agent. Set the starting balance to zero to exercise a shortfall scenario. Compare the two balance curves, then approve or reject.
 2. Under Liquidity Agent set the starting balance to €25,000 and run the forecast.
    Under Investment Agent run the second agent to see the operating cash, reserve and deposit
    proposal. Changing the forecast creates a new decision context.
@@ -44,8 +63,7 @@ FastAPI and open http://127.0.0.1:5173. API documentation is available at `/docs
 4. Under Currency Exposure and Tax Payments enter the terms of a simulation. Money market and
    equipment finance enquiries are also available. The dashboard records each decision.
 
-Each browser receives an isolated demo workspace via an HTTP-only cookie. Keep that cookie
-to resume the same workspace. Use synthetic data in the public demo. The original Streamlit
+The original Streamlit
 history viewer remains available for developers through the optional `legacy` dependencies.
 
 ## Verification
@@ -61,4 +79,4 @@ npm run build --prefix view
 To run the interactive regression against a running app and Qwen endpoint, install Chromium
 with `(cd view && npx playwright install chromium)`, then run `npm run test:e2e --prefix view`.
 Set `CFO_URL` for an OpenShift Route or `BROWSER_CHANNEL=chrome` to use installed Chrome.
-The test creates its own isolated workspace and records simulated decisions.
+Set CFO_MAILBOX_URL to your private Mailpit HTTP endpoint (default http://localhost:8025). The test creates and removes its own account.
