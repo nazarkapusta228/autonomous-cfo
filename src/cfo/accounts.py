@@ -20,6 +20,7 @@ from cfo.service import database_dsn
 
 router = APIRouter(prefix="/api/account")
 COOKIE = "cfo_session"
+SESSION_SECONDS = 7 * 24 * 60 * 60
 Name = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=100)]
 Email = Annotated[
     str,
@@ -200,8 +201,9 @@ def login(body: Credentials, response: Response):
         token = secrets.token_urlsafe(32)
         conn.execute("DELETE FROM cfo_sessions WHERE expires_at<=now()")
         conn.execute(
-            "INSERT INTO cfo_sessions VALUES (%s,%s,now()+interval '30 days')",
-            (digest(token), user["id"]),
+            "INSERT INTO cfo_sessions (digest,user_id,expires_at) "
+            "VALUES (%s,%s,now()+%s * interval '1 second')",
+            (digest(token), user["id"], SESSION_SECONDS),
         )
         response.set_cookie(
             COOKIE,
@@ -209,7 +211,7 @@ def login(body: Credentials, response: Response):
             httponly=True,
             samesite="strict",
             secure=os.getenv("CFO_SECURE_COOKIE") == "1",
-            max_age=30 * 86400,
+            max_age=SESSION_SECONDS,
         )
         return public(user)
 

@@ -36,7 +36,7 @@ FastAPI and open http://127.0.0.1:5173. API documentation is available at `/docs
 
 Apply the SQL migrations before starting FastAPI. Sign up with your name, email and password,
 then enter the emailed code and your signup password. Codes expire after 20 minutes.
-A verified account owns one workspace across browsers. Its HTTP-only session lasts 30 days.
+A verified account owns one workspace across browsers. Its HTTP-only session lasts 7 days from sign-in.
 Password resets revoke all sessions. My profile supports a verified email change and
 permanent account deletion, including that account’s imported statements and decisions.
 

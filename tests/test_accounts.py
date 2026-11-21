@@ -1,3 +1,5 @@
+from datetime import timedelta
+
 import psycopg
 from fastapi.testclient import TestClient
 
@@ -26,7 +28,13 @@ def test_account_lifecycle(postgres_url, monkeypatch):
     assert post("login", email=email, password=password).status_code == 401
     assert verify("activate", password).is_success
     assert verify("activate", password).status_code == 400
-    assert post("login", email=email, password=password).is_success
+    login = post("login", email=email, password=password)
+    assert login.is_success
+    assert "Max-Age=604800" in login.headers["set-cookie"]
+    with psycopg.connect(postgres_url) as conn:
+        assert conn.execute("SELECT expires_at-issued_at FROM cfo_sessions").fetchone() == (
+            timedelta(days=7),
+        )
     first = browser.get("/api/workspace").json()
     assert len(first["statement_rows"]) == 1125
     assert post("names", first_name="Jan", last_name="Kowal").json()["first_name"] == "Jan"
