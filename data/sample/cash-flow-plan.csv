@@ -1,0 +1,61 @@
+date,category,amount_eur,description
+2026-01-01,catering,420.00,Office lunch service
+2026-01-01,logistics,-121.17,Local delivery van fuel
+2026-01-02,packaging,-152.34,Takeaway cartons
+2026-01-03,maintenance,-208.51,Kitchen cleaning service
+2026-01-04,catering,574.68,Weekend event deposit
+2026-01-05,marketing,-210.85,Local advertising placement
+2026-01-05,catering,457.02,Office lunch service
+2026-01-06,logistics,-158.19,Local delivery van fuel
+2026-01-07,packaging,-189.36,Takeaway cartons
+2026-01-08,catering,3250.00,Corporate lunch event deposit
+2026-01-08,maintenance,-245.53,Kitchen cleaning service
+2026-01-09,catering,611.70,Weekend event deposit
+2026-01-09,marketing,-247.87,Local advertising placement
+2026-01-10,catering,494.04,Office lunch service
+2026-01-11,logistics,-116.21,Local delivery van fuel
+2026-01-12,packaging,-147.38,Takeaway cartons
+2026-01-13,marketing,-1860.00,Winter campaign launch
+2026-01-13,maintenance,-203.55,Kitchen cleaning service
+2026-01-13,catering,569.72,Weekend event deposit
+2026-01-14,marketing,-205.89,Local advertising placement
+2026-01-15,catering,452.06,Office lunch service
+2026-01-16,logistics,-153.23,Local delivery van fuel
+2026-01-17,packaging,-184.40,Takeaway cartons
+2026-01-18,maintenance,-240.57,Kitchen cleaning service
+2026-01-18,catering,606.74,Weekend event deposit
+2026-01-19,training,-980.00,Kitchen safety training
+2026-01-19,marketing,-242.91,Local advertising placement
+2026-01-20,catering,489.08,Office lunch service
+2026-01-21,logistics,-190.25,Local delivery van fuel
+2026-01-22,packaging,-142.42,Takeaway cartons
+2026-01-22,maintenance,-198.59,Kitchen cleaning service
+2026-01-23,catering,564.76,Weekend event deposit
+2026-01-24,marketing,-200.93,Local advertising placement
+2026-01-25,catering,447.10,Office lunch service
+2026-01-26,catering,4920.00,Conference catering settlement
+2026-01-26,logistics,-148.27,Local delivery van fuel
+2026-01-26,packaging,-179.44,Takeaway cartons
+2026-01-27,maintenance,-235.61,Kitchen cleaning service
+2026-01-28,catering,601.78,Weekend event deposit
+2026-01-29,marketing,-237.95,Local advertising placement
+2026-01-30,catering,484.12,Office lunch service
+2026-01-31,logistics,-185.29,Local delivery van fuel
+2026-01-31,packaging,-216.46,Takeaway cartons
+2026-02-01,maintenance,-193.63,Kitchen cleaning service
+2026-02-02,catering,559.80,Weekend event deposit
+2026-02-03,marketing,-195.97,Local advertising placement
+2026-02-04,maintenance,-2350.00,Refrigeration service contract
+2026-02-04,catering,442.14,Office lunch service
+2026-02-04,logistics,-143.31,Local delivery van fuel
+2026-02-05,packaging,-174.48,Takeaway cartons
+2026-02-06,maintenance,-230.65,Kitchen cleaning service
+2026-02-07,catering,596.82,Weekend event deposit
+2026-02-08,marketing,-232.99,Local advertising placement
+2026-02-08,catering,479.16,Office lunch service
+2026-02-09,logistics,-180.33,Local delivery van fuel
+2026-02-10,catering,3640.00,Winter events settlement
+2026-02-10,packaging,-211.50,Takeaway cartons
+2026-02-11,maintenance,-267.67,Kitchen cleaning service
+2026-02-12,catering,554.84,Weekend event deposit
+2026-02-13,marketing,-191.01,Local advertising placement
