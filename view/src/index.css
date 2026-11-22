@@ -663,3 +663,5 @@ input, select, textarea { font-family: inherit; }
 @keyframes snail-nod {50%{transform:translateY(-2px) rotate(-5deg)}}
 @keyframes snail-look {30%{transform:translateX(-2px)}70%{transform:translateX(2px)}}
 @media(prefers-reduced-motion:reduce){.with-assistant,.snail-log,.cfo-snail,.cfo-snail *{transition:none!important;animation:none!important;}}
+
+.operating-scenario .table tr > * + * { border-inline-start: 1px solid var(--border); }

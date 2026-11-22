@@ -52,7 +52,7 @@ export default function OperatingScenario({ analysis }) {
       <table className="table section"><thead><tr><th>{t('Metric')}</th><th>{t('Baseline')}</th><th>{t('Scenario')}</th></tr></thead>
         <tbody>{labels.map((name,i) => <tr key={name}><th scope="row">{t(name)}</th><td>{base[i]}</td><td>{scenario[i]}</td></tr>)}</tbody>
       </table>
-      <BalanceChart forecast neutral points={forecast.daily_balances} action={result}
+      <BalanceChart centered forecast neutral points={forecast.daily_balances} action={result}
         actionLabel={t('Scenario balance','Saldo scenariusza')} reserve={forecast.reserve}/>
     </> : <p role="status">{t('Enter a change from −100% to 1000% and a whole delay from 0 to 365 days.')}</p>}
   </section>;
