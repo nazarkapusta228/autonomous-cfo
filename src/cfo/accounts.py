@@ -185,7 +185,7 @@ def current_user(conn, request, lock="FOR SHARE OF u"):
 
 
 def public(user):
-    return {k: user[k] for k in ("first_name", "last_name", "email")}
+    return {k: user[k] for k in ("first_name", "last_name", "email", "tour_pending")}
 
 
 @router.get("/me")
@@ -194,14 +194,22 @@ def me(request: Request):
         return public(current_user(conn, request))
 
 
+@router.post("/tour-dismiss")
+def dismiss_tour(request: Request):
+    with connection() as conn:
+        user = current_user(conn, request, "FOR UPDATE OF u")
+        conn.execute("UPDATE cfo_users SET tour_pending=false WHERE id=%s", (user["id"],))
+    return {"ok": True}
+
+
 @router.post("/signup")
 def signup(body: Registration, request: Request):
     limit("signup:" + request.client.host, 60)
     limit("mail:" + body.email, 5)
     with connection() as conn:
         user = conn.execute(
-            "INSERT INTO cfo_users(id,email,first_name,last_name,password_hash) "
-            "VALUES(%s,%s,%s,%s,%s) "
+            "INSERT INTO cfo_users(id,email,first_name,last_name,password_hash,tour_pending) "
+            "VALUES(%s,%s,%s,%s,%s,true) "
             "ON CONFLICT(email) DO UPDATE SET first_name=excluded.first_name,"
             "last_name=excluded.last_name,"
             "password_hash=excluded.password_hash WHERE NOT cfo_users.verified RETURNING id",

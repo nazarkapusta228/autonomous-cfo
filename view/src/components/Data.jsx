@@ -74,7 +74,7 @@ function Dataset({ kind, title, description }) {
     );
   return (
     <section className="card mb-4 data-panel">
-      <h3>{title}</h3>
+      <h3 data-tour={kind}>{title}</h3>
       <p className="card-sub">{description}</p>
       <p>
         {info.filename ? (

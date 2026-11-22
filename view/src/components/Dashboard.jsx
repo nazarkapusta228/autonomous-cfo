@@ -52,7 +52,7 @@ function Overview() {
         ))}
       </div>
       <section className="card mb-4">
-        <div className="card-title">{tr("Cash balance forecast")}</div>
+        <div className="card-title" data-tour="forecast">{tr("Cash balance forecast")}</div>
         <p className="card-sub"> {tr("Starting at the cut-off balance, each day adds expected receipts and subtracts planned payments. The dashed line marks your safety reserve.")} </p>
         <BalanceChart centered forecast
           neutral

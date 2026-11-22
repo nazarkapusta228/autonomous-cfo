@@ -31,7 +31,7 @@ export default function Sidebar({ active, onNavigate }) {
           const Icon = n.icon;
           return (
             <button
-              key={n.key}
+              key={n.key} data-tour={n.key}
               className={`nav-item ${active === n.key ? 'active' : ''}`}
               aria-current={active === n.key ? 'page' : undefined}
               onClick={() => {

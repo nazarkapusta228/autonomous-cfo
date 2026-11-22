@@ -84,6 +84,13 @@ export async function exerciseAccount(page) {
   await field('Email code', latestCode);
   await click('Verify email');
   await login(email, password);
+  await click('Start tour');
+  const tour = page.locator('dialog.workspace-tour');
+  for (let step = 1; step <= 18; step++) {
+    await tour.getByText(step + ' / 18', {exact:true}).waitFor();
+    await tour.locator('svg line').waitFor({state:'attached'});
+    await click(step === 18 ? 'Finish' : 'Next');
+  }
   await page.reload();
   await page.locator('.user-chip').click();
   await field('First name', 'Ada');

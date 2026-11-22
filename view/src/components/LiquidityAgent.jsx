@@ -38,7 +38,7 @@ function Inputs() {
   }
   return (
     <form ref={form} className="card mb-4" onSubmit={run}>
-      <div className="card-title">{tr("Forecast settings")}</div>
+      <div className="card-title" data-tour="inputs">{tr("Forecast settings")}</div>
       <div className="card-sub"> {tr("Booked movements through the cut-off set the forecast starting point. The reserve is the minimum cash cushion you want to keep.")} </div>
       <fieldset disabled={busy} className="controls forecast-fields">
         {fields.map(([label, key, type]) =>
@@ -157,7 +157,7 @@ export default function LiquidityAgent() {
       <div className="liquidity-results">
         <ForecastChart />
         <section className="card">
-          <div className="card-title">{tr("Liquidity decision")}</div>
+          <div className="card-title" data-tour="decision">{tr("Liquidity decision")}</div>
           <dl className="data-strip decision-summary">
             <div><dt>{tr('Funding needed')}</dt><dd>{eur(f.funding_needed)}</dd></div>
             <div><dt>{tr('First reserve shortfall')}</dt><dd>{f.funding_needed_by || tr('None in horizon')}</dd></div>
@@ -230,7 +230,7 @@ export default function LiquidityAgent() {
         )}
       </section>
       <section className="card">
-        <div className="card-title">{tr("Planned payments and income")}</div>
+        <div className="card-title" data-tour="payments">{tr("Planned payments and income")}</div>
         <p className="card-sub"> {tr('Known payments and invoices are scheduled first. The selected model estimates the remaining monthly receipts and spending.')} </p>
         {a.plan.length ? (
           <FlowTable key={state.revision} flows={a.plan} showSource />

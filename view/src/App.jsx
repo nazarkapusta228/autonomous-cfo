@@ -32,12 +32,18 @@ const PAGES = {
   },
 };
 
+import WorkspaceTour from './components/WorkspaceTour';
+
 export default function App() {
+  return <Preferences><AccountGate><AppProvider><StatementPeriod><Workspace /></StatementPeriod></AppProvider></AccountGate></Preferences>;
+}
+
+function Workspace() {
   const [active, setActive] = useState('dashboard');
   const Page = PAGES[active].component;
 
   return (
-    <Preferences><AccountGate><AppProvider><StatementPeriod>
+    <>
       <div className="app-shell">
         <Sidebar active={active} onNavigate={setActive} />
         <div className="main-area">
@@ -48,6 +54,7 @@ export default function App() {
           </div>
         </div>
       </div>
-    </StatementPeriod></AppProvider></AccountGate></Preferences>
+      <WorkspaceTour active={active} navigate={setActive} />
+    </>
   );
 }

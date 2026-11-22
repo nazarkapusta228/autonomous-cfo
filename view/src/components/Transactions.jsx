@@ -259,7 +259,7 @@ export default function Transactions() {
         </div>
       </section>
       <section className="card">
-        <div className="card-title">{tr("Account activity ·")} {rows.length} {tr("payments")}</div>
+        <div className="card-title" data-tour="activity">{tr("Account activity ·")} {rows.length} {tr("payments")}</div>
         <p className="card-sub">
           {rows.length} {tr("matching payments in the selected statement period.")} </p>
         <p role="status">{notice}</p>
