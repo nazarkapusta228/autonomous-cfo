@@ -24,6 +24,14 @@ import assert from 'node:assert/strict';
       page.locator('nav').getByRole('button', { name: label, exact: true }).click();
     await page.goto(process.env.CFO_URL || 'http://127.0.0.1:8080', { waitUntil: 'networkidle' });
     const deleteTestAccount = await exerciseAccount(page);
+    const assistant = page.locator('.snail-chat');
+    await assistant.getByRole('textbox').fill('Can I buy equipment for 6000 EUR?');
+    await page.locator('.sidebar.chat-open').waitFor();
+    await assistant.getByRole('button', {name:'Send'}).click();
+    await assistant.getByText(/Credit needed/).waitFor();
+    await nav('Data');
+    assert.equal(await page.locator('.sidebar.chat-open').count(), 0);
+    assert.equal(await page.locator('.snail-chat.tall').count(), 1);
     async function runForecast() {
       const refreshed = page.waitForResponse((r) => r.url().endsWith('/api/workspace') && r.ok());
       await click('Run forecast');

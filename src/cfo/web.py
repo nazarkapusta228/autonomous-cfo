@@ -19,7 +19,7 @@ from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, ConfigDict, Field
 
-from cfo import accounts
+from cfo import accounts, assistant
 from cfo import data_files as files
 from cfo import workspace as ws
 from cfo.analysis import keyed_flows
@@ -154,6 +154,22 @@ def workspace(request: Request):
         user = accounts.current_user(conn, request)
         row = ws.lookup(conn, user["workspace_id"])
         return ws.snapshot(conn, dsn, row)
+
+
+class ChatRequest(Change):
+    question: str = Field(min_length=1, max_length=1200)
+    language: Literal["en", "pl", "de"]
+    language_changed: bool = False
+    history: list[Annotated[str, Field(max_length=1500)]] = Field(
+        default_factory=list, max_length=4
+    )
+
+
+@app.post("/api/assistant")
+def chat(request: Request, body: ChatRequest):
+    with current(request, body.revision, lock=False) as (conn, dsn, row):
+        facts = assistant.evidence(ws.snapshot(conn, dsn, row), body.question)
+    return assistant.answer(Settings(), facts, body)
 
 
 @app.get("/api/forecast/chart")

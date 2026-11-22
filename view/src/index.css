@@ -622,3 +622,33 @@ input, select, textarea { font-family: inherit; }
 .daily-flow .chart-key { justify-content: center; }
 .scenario-rule { margin-block: .75rem; border: 1px solid var(--border); border-radius: 8px; padding: .75rem; }
 .scenario-rule legend { padding-inline: .3rem; font-weight: 600; }
+
+.with-assistant {overflow-y:auto;transition:width .34s ease;}
+.with-assistant .sidebar-nav {flex:0 0 auto;overflow:visible;}
+.with-assistant .sidebar-nav > :last-child {margin-top:0;}
+@media(min-width:721px){.with-assistant.chat-open{width:min(486px,52vw);}}
+.snail-chat {margin:1.6rem .85rem 1rem;padding:.75rem;border:1px solid var(--border);border-radius:14px;background:color-mix(in srgb,var(--bg-card) 84%,var(--primary));min-width:0;}
+.snail-chat header {display:flex;align-items:center;gap:.45rem;font-size:.9rem;}
+.cfo-snail {width:82px;height:auto;flex:none;}
+.snail-log {height:5.4rem;overflow:auto;transition:height .32s ease;font-size:.84rem;overflow-wrap:anywhere;scrollbar-width:thin;}
+.snail-chat.tall .snail-log {height:clamp(9rem,24vh,16rem);}
+.snail-log p {padding:.45rem .55rem;margin:.35rem 0;white-space:pre-wrap;background:var(--bg-card);border-radius:8px;}
+.snail-alerts small {color:var(--text-muted);}
+.snail-log .snail-question {margin-left:1.25rem;background:var(--bg-elev);}
+.snail-chat form {display:flex;gap:.4rem;margin-top:.55rem;}
+.snail-chat input {flex:1;min-width:0;background:var(--bg-elev);color:var(--text);border:1px solid var(--border);border-radius:7px;padding:.55rem;font:inherit;font-size:.85rem;}
+.snail-chat form button {border:0;border-radius:7px;padding:.5rem;background:var(--primary);color:var(--bg);cursor:pointer;}
+.snail-chat button:disabled {opacity:.5;}
+.cfo-snail .pupils {transition:transform .3s;}
+.cfo-snail.writing .pupils {transform:translateY(2px);}
+.cfo-snail.thinking .pupils {transform:translate(1.5px,-2.6px);}
+.cfo-snail.looking .pupils {animation:snail-look 2s ease;}
+.cfo-snail .wink,.cfo-snail .snail-face,.cfo-snail .snail-smile {transform-box:fill-box;transform-origin:center;}
+.cfo-snail .wink {animation:snail-wink .85s ease both;}
+.cfo-snail .snail-face {animation:snail-nod .9s ease;}
+.cfo-snail .snail-smile {animation:snail-smile .9s ease;}
+@keyframes snail-wink {0%,40%,77%,100%{transform:scaleY(1)}58%{transform:scaleY(.12)}}
+@keyframes snail-smile {0%,100%{transform:scale(1)}55%{transform:scale(1.16,1.3)}}
+@keyframes snail-nod {50%{transform:translateY(-2px) rotate(-5deg)}}
+@keyframes snail-look {30%{transform:translateX(-2px)}70%{transform:translateX(2px)}}
+@media(prefers-reduced-motion:reduce){.with-assistant,.snail-log,.cfo-snail *{transition:none!important;animation:none!important;}}

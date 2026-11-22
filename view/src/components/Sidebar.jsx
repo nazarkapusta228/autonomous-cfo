@@ -1,6 +1,13 @@
 import { usePreferences } from '../context/Preferences';
-import React from 'react';
-import { Database, Settings, LayoutDashboard, Rocket, ListOrdered } from 'lucide-react';
+import React, { useEffect, useRef, useState } from 'react';
+import AssistantChat from './AssistantChat';
+import {
+  Database,
+  Settings,
+  LayoutDashboard,
+  Rocket,
+  ListOrdered,
+} from 'lucide-react';
 
 const NAV = [
   { key: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -12,12 +19,26 @@ const NAV = [
 
 export default function Sidebar({ active, onNavigate }) {
   const { t: tr } = usePreferences();
+  const [expanded, setExpanded] = useState(false);
+  const side = useRef(null);
+  useEffect(() => {
+    const collapse = (event) => {
+      if (!side.current?.contains(event.target)) setExpanded(false);
+    };
+    document.addEventListener('pointerdown', collapse);
+    return () => document.removeEventListener('pointerdown', collapse);
+  }, []);
   return (
-    <aside className="sidebar">
+    <aside
+      ref={side}
+      className={'sidebar with-assistant' + (expanded ? ' chat-open' : '')}
+    >
       <div className="sidebar-brand">
         <img src="/cfo-mark.png" alt="" width="46" height="46" />
-        <div><h1>Autonomous CFO</h1>
-        <p>RedHat Collabothon 2026</p></div>
+        <div>
+          <h1>Autonomous CFO</h1>
+          <p>RedHat Collabothon 2026</p>
+        </div>
       </div>
       <nav className="sidebar-nav">
         {NAV.map((n) => {
@@ -27,7 +48,10 @@ export default function Sidebar({ active, onNavigate }) {
               key={n.key}
               className={`nav-item ${active === n.key ? 'active' : ''}`}
               aria-current={active === n.key ? 'page' : undefined}
-              onClick={() => onNavigate(n.key)}
+              onClick={() => {
+                setExpanded(false);
+                onNavigate(n.key);
+              }}
             >
               <Icon size={20} aria-hidden="true" />
               {tr(n.label)}
@@ -35,7 +59,7 @@ export default function Sidebar({ active, onNavigate }) {
           );
         })}
       </nav>
-
+      <AssistantChat expand={() => setExpanded(true)} />
     </aside>
   );
 }
