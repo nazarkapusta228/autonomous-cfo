@@ -1,21 +1,6 @@
 # OpenShift deployment
 
-The `autonomous-cfo` project runs FastAPI and the React dashboard, PostgreSQL 16 with persistent storage, and Qwen2.5-7B-Instruct served by vLLM through KServe. The application has a public HTTPS route. Both agents call the model inside the cluster at `http://cfo-qwen-predictor:8080/v1`.
-
-## Open the application
-
-[Open Autonomous CFO](https://autonomous-cfo-autonomous-cfo.apps.ocp.dtnkb.sandbox1202.opentlc.com/). In the OpenShift console, the same address appears under **Networking → Routes → autonomous-cfo → Location**.
-
-Sign in with the OpenShift CLI to inspect the deployment. The web console provides a **Copy login command** option.
-
-```sh
-oc project autonomous-cfo
-oc get route autonomous-cfo -o jsonpath='https://{.spec.host}{"\n"}'
-oc get isvc cfo-qwen
-oc get deployments,pvc
-```
-
-The application's `/api/health` endpoint reports the status of the application, database and model. The OpenShift AI dashboard shows the model under **Projects → autonomous-cfo → Deployments**.
+The `autonomous-cfo` namespace hosts the web application, PostgreSQL 16 and the Qwen model. Sign in with `oc` before running the commands below.
 
 ## Deploy an existing project
 
@@ -51,15 +36,7 @@ Create the settings secret once for a new database. An existing persistent volum
 
 ## Account email
 
-Sign-up, email changes and password resets require SMTP delivery. For a verified Brevo sender, run the following command after deploying the application.
-
-```sh
-python scripts/configure_mail.py brevo
-```
-
-The script prompts for the sender, SMTP login and key, stores the settings in the `cfo-mail-delivery` secret, restarts the application and checks SMTP authentication. The `gmail` option uses the configured Gmail sender and prompts for its Google app password.
-
-For other relays, configure `SMTP_HOST`, `SMTP_PORT`, `SMTP_TLS` (`starttls` or `implicit`), `SMTP_FROM`, `SMTP_USERNAME` and `SMTP_PASSWORD` in the same secret. Set `SMTP_PREVIEW_INBOX_URL` to an empty value for public delivery. Restart the application after changing the secret. For local development, set the corresponding values in `.env`.
+Sign-up and password recovery require a working SMTP sender. Configure a verified Brevo sender with `python scripts/configure_mail.py brevo`. The script prompts for credentials, updates the delivery secret and restarts the application.
 
 ## Private email preview
 

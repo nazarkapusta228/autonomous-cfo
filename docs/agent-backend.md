@@ -1,6 +1,6 @@
 # Command-line and API reference
 
-Run the CLI from the repository root after completing the [local setup](../README.md#local-setup). The default input is the bundled bank statement, with a cut-off date of 31 May 2025, an opening balance of EUR 2,500, a zero reserve and a 45-day forecast.
+Run the CLI from the repository root after completing the [local setup](../README.md#local-setup).
 
 ## Forecast and agent commands
 
@@ -28,6 +28,11 @@ Use `reject` in place of `approve` to decline a proposal. The actor is recorded 
 
 ## Web API
 
-FastAPI publishes the [interactive API reference](http://127.0.0.1:8080/docs) and the OpenAPI schema at `/openapi.json`. Workspace requests use the signed-in account. The web interface reads the saved decision when the page reloads.
+The running app lists all endpoints and request fields in [FastAPI's interactive reference](http://127.0.0.1:8080/docs). Dashboard requests use the signed-in workspace.
 
-[Forecast inputs](data-notes.md) · [Agent architecture](architecture.md)
+| Method and path | Purpose |
+| --- | --- |
+| `POST /api/forecast` | Calculate the workspace forecast. |
+| `GET /api/forecast/chart` | Load chart data. |
+| `POST /api/agents/liquidity` | Assess the funding need. |
+| `POST /api/agents/liquidity/credit-scenario` | Compare an overdraft or credit line at the supplied annual rate for a current credit proposal. |
