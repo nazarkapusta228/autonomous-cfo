@@ -665,3 +665,4 @@ input, select, textarea { font-family: inherit; }
 @media(prefers-reduced-motion:reduce){.with-assistant,.snail-log,.cfo-snail,.cfo-snail *{transition:none!important;animation:none!important;}}
 
 .operating-scenario .table tr > * + * { border-inline-start: 1px solid var(--border); }
+.operating-scenario .table tr > * { border-bottom: 1px solid var(--border); }
