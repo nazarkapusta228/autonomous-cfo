@@ -4,7 +4,7 @@ Autonomous CFO
 
 ## One-Line Summary
 
-Autonomous CFO helps small business owners forecast daily cash balances, spot upcoming shortfalls and compare ways to cover them before bills are due.
+From first-time founders to family-business successors, turn transactions, invoices and plans into a daily cash forecast with an AI assistant and useful simulations to explore your next move.
 
 ## Technology Stack
 
@@ -19,40 +19,37 @@ Autonomous CFO helps small business owners forecast daily cash balances, spot up
 
 ### THE PROBLEM
 
-A pizzeria can finish the month with money in the bank and still struggle to pay wages on Tuesday if a customer pays on Friday. The bank statement shows what has already cleared, while invoices and the cash flow plan show what is still due. A small business owner has to bring those records together to answer a practical question: **On which day could cash run short, and how much would I need to cover the gap?**
+A shop owner needs to know, “Can I pay my supplier today and still cover payroll on Friday?” Their bank balance tells only part of the story. Invoices have different due dates, and terms like *liquidity* or *funding gap* can make a finance dashboard hard to use.
+
+In a Bluevine survey, 35% of respondents who used fintech said they used or wanted automated cash-flow forecasting. For owners without a finance team, the next challenge is understanding what the forecast means for a payment they need to make. [Bluevine survey](https://www.bluevine.com/blog/small-business-banking-gap-survey)
 
 ### YOUR SOLUTION
 
-Autonomous CFO combines bank transactions, invoices and planned payments into a daily cash forecast. The owner sets the minimum balance they want to keep. The Liquidity Agent identifies the first day the balance is projected to fall below that reserve and calculates how much funding would cover the deepest gap.
+Autonomous CFO brings bank transactions, invoices and planned payments into one daily forecast. It shows when cash could run short, by how much, and which payments are due that day.
 
-The forecast adapts to the business’s payment history. It tests several forecasting methods on earlier months, selects the one that best tracked daily cash movements and combines its projections with known commitments. If funding is needed, the owner can compare an overdraft with a credit line and see how each would affect cash, interest and repayment timing.
+An optional interactive tour shows new users where to start. Clicking a financial term opens a short definition right where it appears. For a question about their own business, owners can ask the AI assistant, “Why might I run short next month?” and get an explanation based on their workspace data.
 
 ### THE WORKING PROTOTYPE
 
-1. **Import business data.** After email verification, the owner enters an empty workspace. They can upload a bank statement, enter an opening balance and add a cash flow plan or invoices.
-2. **Inspect the forecast.** The owner can view one, two or three months of projected daily balances, set a reserve and see when cash is expected to reach its lowest point.
-3. **Test an operating change.** The owner can select a cost category found in their transactions, such as rent or payroll, enter a percentage increase or decrease and compare the result with the original forecast. They can also explore what happens if receipts arrive late.
-4. **Review a funding decision.** The agent explains the projected shortfall or recommends holding cash. When it proposes credit, the owner can change the annual interest rate and compare borrowing costs, peak debt and the projected payoff date. Credit actions are simulations.
+Users can upload a bank statement, add invoices and set a minimum cash reserve. The dashboard shows their projected balance for up to three months. They can then change a payment amount or delay an expected receipt and compare the outcome with the original forecast.
 
 ### BEHIND THE BUILD
 
-During the hackathon, we built the data import and invoice matching logic, forecasting engine, credit simulator and dashboard. React and Recharts display the results, FastAPI connects the interface to the Python calculations, and PostgreSQL stores each workspace and its decisions.
+We built the data import, invoice matching, forecasting engine, scenario simulator and guided interface during the hackathon. The dashboard uses React and Recharts, the backend uses FastAPI, and PostgreSQL stores each user’s workspace.
 
-The forecasting engine compares seven methods using historical windows of one, three, six or twelve months. Some give recent months more weight. With twelve complete months of data, the engine makes eleven monthly comparisons. At each step, it uses only earlier months to predict the next one and measures how far the forecast drifts from the actual cash movement at each daily close. We chose this measure because a forecast can get the month-end total right while missing a mid-month cash shortage.
-
-Python calculates the balances, funding amounts and dates. Qwen runs on Red Hat OpenShift AI and uses those figures to explain the recommendation in plain language.
+Python calculates the daily balances and funding gaps using decimal arithmetic. Qwen, served by vLLM on Red Hat OpenShift AI, uses those figures to answer questions in English, Polish or German.
 
 ### CHALLENGES AND DISCOVERIES
 
-One supplier bill can appear in the cash flow plan, the invoice list and the bank statement. Counting it several times would create a false cash shortage. We used invoice IDs to link records, matched settled invoices to bank transactions and let known commitments replace matching historical estimates.
+One invoice can appear in a plan and later in a bank statement. Counting both entries as future expenses creates a false shortfall. We match invoices to booked payments and flag uncertain matches.
 
-Testing the credit simulator revealed another detail: a higher interest rate can increase the cost of borrowing while the payoff date stays the same. If Friday’s customer payment still covers the outstanding debt, the business can repay on Friday under either rate. This is why the prototype shows both total interest and repayment timing.
+We also found that “What does *reserve* mean?” and “Will I have enough to pay rent?” need different answers. A one-line definition handles the first. The second needs the owner’s dates, payments and forecast. That distinction shaped both the glossary and the assistant.
 
 ### RESULTS AND NEXT STEPS
 
-We tested the forecast with a sample pizzeria statement containing **1,125 transactions across twelve months**. All five forecast-analysis tests passed. They cover at-risk payments, settled invoices, credit drawdown and repayment, and consistency across forecast periods. One test verifies that extending a forecast from 28 to 90 days preserves the projected balance on each of the first 28 days.
+We deployed Autonomous CFO on Red Hat OpenShift and tested the forecast against a month of bank records. Our June backtest showed that the business stayed below zero longer than its payment history suggested.
 
-The result we are most proud of is that an owner can trace a funding proposal back to a specific day, inspect the payments behind it and see which future receipts could repay the debt. Our validation so far covers one sample business. Next, we want to measure forecast error across different businesses and test whether owners can use the recommendation to make a funding decision before a bill comes due.
+Our strongest result is a workflow an owner can follow from start to finish: spot a projected shortfall, find the payments due and try a different payment date. Next, we’ll measure how much upcoming invoices improve forecast accuracy and ask first-time users to complete that workflow without coaching.
 
 ## Source Code Repository
 
