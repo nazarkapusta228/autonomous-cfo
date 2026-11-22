@@ -1,3 +1,4 @@
+import { readFile } from 'node:fs/promises';
 import { chromium } from 'playwright';
 import { exerciseAccount } from './account.mjs';
 import assert from 'node:assert/strict';
@@ -24,6 +25,15 @@ import assert from 'node:assert/strict';
       page.locator('nav').getByRole('button', { name: label, exact: true }).click();
     await page.goto(process.env.CFO_URL || 'http://127.0.0.1:8080', { waitUntil: 'networkidle' });
     const deleteTestAccount = await exerciseAccount(page);
+    const fresh = await state();
+    assert.equal(fresh.statement_rows.length, 0);
+    const statement = await readFile(new URL('../../data/sample/pizzeria-amalfi-2025.csv', import.meta.url), 'utf8');
+    const seeded = await page.request.post('/api/forecast', {
+      headers: {'X-CFO-Client': 'dashboard'},
+      data: {revision: fresh.revision, settings: {...fresh.settings, as_of: '2025-05-31', starting_balance: '2500.00'}, statement},
+    });
+    assert(seeded.ok());
+    await page.reload();
     const assistant = page.locator('.snail-chat');
     await assistant.getByRole('textbox').fill('Can I buy equipment for 6000 EUR?');
     await page.locator('.sidebar.chat-open').waitFor();

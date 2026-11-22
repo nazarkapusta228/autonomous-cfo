@@ -2,8 +2,6 @@
 
 from datetime import date
 from decimal import Decimal
-from functools import lru_cache
-from pathlib import Path
 from typing import Annotated
 from uuid import UUID, uuid4
 
@@ -23,23 +21,14 @@ from cfo.workflow import find_by_request_id
 
 class ForecastSettings(BaseModel):
     model_config = ConfigDict(extra="forbid")
-    as_of: date = date(2025, 5, 31)
-    starting_balance: Money = Decimal("2500.00")
+    as_of: date = Field(default_factory=date.today)
+    starting_balance: Money = Decimal("0.00")
     reserve: Annotated[Money, Field(ge=0)] = Decimal("0.00")
     horizon_days: int = Field(default=45, ge=1, le=366)
 
 
 def connection(dsn):
     return psycopg.connect(dsn, row_factory=dict_row, connect_timeout=4)
-
-
-@lru_cache(maxsize=1)
-def sample():
-    base = Path("data/sample")
-    return (
-        (base / "pizzeria-amalfi-2025.csv").read_bytes(),
-        b"",
-    )
 
 
 def new_revision(conn, workspace, revision):
@@ -52,8 +41,7 @@ def new_revision(conn, workspace, revision):
 
 def create_workspace(conn, dsn):
     workspace, revision = uuid4(), uuid4()
-    statement, plan = sample()
-    import_id, _ = import_statement(dsn, statement, scope=str(workspace), conn=conn)
+    import_id, _ = import_statement(dsn, b"", scope=str(workspace), conn=conn)
     conn.execute(
         "INSERT INTO web_workspaces (id,revision,import_id,statement,plan,settings) "
         "VALUES (%s,%s,%s,%s,%s,%s)",
@@ -61,8 +49,8 @@ def create_workspace(conn, dsn):
             workspace,
             revision,
             import_id,
-            statement,
-            plan,
+            b"",
+            b"",
             Jsonb(ForecastSettings().model_dump(mode="json")),
         ),
     )

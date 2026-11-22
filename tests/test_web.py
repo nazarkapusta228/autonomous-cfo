@@ -1,5 +1,6 @@
 """HTTP contracts for the React workspace and its PostgreSQL boundaries."""
 
+from pathlib import Path
 from unittest.mock import patch
 from uuid import uuid4
 
@@ -21,6 +22,16 @@ def client():
         json=dict(purpose="activate", code=code, **credentials),
     ).is_success
     assert browser.post("/api/account/login", json=credentials).is_success
+    initial = state(browser)
+    statement = Path(__file__).parents[1] / "data/sample/pizzeria-amalfi-2025.csv"
+    assert browser.post(
+        "/api/forecast",
+        json={
+            "revision": initial["revision"],
+            "settings": dict(initial["settings"], as_of="2025-05-31", starting_balance="2500.00"),
+            "statement": statement.read_text(),
+        },
+    ).is_success
     return browser
 
 

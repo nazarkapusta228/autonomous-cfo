@@ -47,7 +47,9 @@ def test_account_lifecycle(postgres_url, monkeypatch):
             timedelta(days=7),
         )
     first = browser.get("/api/workspace").json()
-    assert len(first["statement_rows"]) == 1125
+    assert first["statement_rows"] == first["history"] == first["analysis"]["plan"] == []
+    assert all(not file["present"] for file in first["data_files"].values())
+    assert first["analysis"]["forecast"]["opening_balance"] == "0.00"
     assert post("names", first_name="Jan", last_name="Kowal").json()["first_name"] == "Jan"
     new_email = "new@example.test"
     assert post("change-email", email=new_email, password=password).is_success
