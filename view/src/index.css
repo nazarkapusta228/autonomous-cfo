@@ -629,9 +629,22 @@ input, select, textarea { font-family: inherit; }
 @media(min-width:721px){.with-assistant.chat-open{width:min(486px,52vw);}}
 .snail-chat {margin:1.6rem .85rem 1rem;padding:.75rem;border:1px solid var(--border);border-radius:14px;background:color-mix(in srgb,var(--bg-card) 84%,var(--primary));min-width:0;}
 .snail-chat header {display:flex;align-items:center;gap:.45rem;font-size:.9rem;}
-.cfo-snail {width:82px;height:auto;flex:none;}
-.snail-log {height:5.4rem;overflow:auto;transition:height .32s ease;font-size:.84rem;overflow-wrap:anywhere;scrollbar-width:thin;}
-.snail-chat.tall .snail-log {height:clamp(9rem,24vh,16rem);}
+.with-assistant .sidebar-settings {margin-top:auto;display:flex;padding-bottom:.75rem;}
+.snail-chat header {display:grid;gap:.55rem;margin-bottom:.7rem;}
+.cfo-snail {width:108px;height:auto;position:relative;left:0;transform:translateX(0);transition:left .45s ease,transform .45s ease;}
+.chat-open .cfo-snail {left:50%;transform:translateX(-50%);}
+.snail-chat form button {display:grid;place-items:center;}
+.cfo-snail .snail-shell {transform-box:fill-box;transform-origin:50% 85%;}
+.cfo-snail.writing .snail-shell {animation:shell-write .8s ease-in-out infinite alternate;}
+.cfo-snail.thinking .snail-shell {animation:shell-think 1.35s ease-in-out infinite alternate;}
+.cfo-snail.writing .snail-face {animation:face-write .85s ease-in-out infinite alternate;}
+.cfo-snail.thinking .snail-face {animation:face-think 1.35s ease-in-out infinite alternate;}
+@keyframes shell-write {from{transform:rotate(-8deg)}to{transform:translate(3px,-3px) rotate(10deg)}}
+@keyframes shell-think {from{transform:rotate(8deg)}to{transform:translate(-2px,-5px) rotate(-13deg)}}
+@keyframes face-write {to{transform:translateY(3px) rotate(6deg)}}
+@keyframes face-think {to{transform:translateY(-2px) rotate(-8deg)}}
+.snail-log {height:10.8rem;overflow:auto;transition:height .32s ease;font-size:.84rem;overflow-wrap:anywhere;scrollbar-width:thin;}
+.snail-chat.tall .snail-log {height:clamp(18rem,48vh,32rem);}
 .snail-log p {padding:.45rem .55rem;margin:.35rem 0;white-space:pre-wrap;background:var(--bg-card);border-radius:8px;}
 .snail-alerts small {color:var(--text-muted);}
 .snail-log .snail-question {margin-left:1.25rem;background:var(--bg-elev);}
@@ -651,4 +664,4 @@ input, select, textarea { font-family: inherit; }
 @keyframes snail-smile {0%,100%{transform:scale(1)}55%{transform:scale(1.16,1.3)}}
 @keyframes snail-nod {50%{transform:translateY(-2px) rotate(-5deg)}}
 @keyframes snail-look {30%{transform:translateX(-2px)}70%{transform:translateX(2px)}}
-@media(prefers-reduced-motion:reduce){.with-assistant,.snail-log,.cfo-snail *{transition:none!important;animation:none!important;}}
+@media(prefers-reduced-motion:reduce){.with-assistant,.snail-log,.cfo-snail,.cfo-snail *{transition:none!important;animation:none!important;}}

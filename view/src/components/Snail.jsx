@@ -14,6 +14,7 @@ export default function Snail({ pose }) {
         stroke="#34483a"
         strokeWidth="2"
       />
+      <g className="snail-shell">
       <circle
         cx="48"
         cy="44"
@@ -29,6 +30,7 @@ export default function Snail({ pose }) {
         strokeWidth="3"
         strokeLinecap="round"
       />
+      </g>
       <g className="snail-face">
         <g fill="white" stroke="#435446">
           <ellipse cx="93" cy="39" rx="5" ry="6" />

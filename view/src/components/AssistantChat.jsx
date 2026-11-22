@@ -183,7 +183,7 @@ function notices(state, prefs, w, money, today, priorPlan) {
   return [...new Set(lines)];
 }
 
-export default function AssistantChat({ expand }) {
+export default function AssistantChat({ expand, expanded }) {
   const { state } = useApp(),
     { prefs, money } = usePreferences();
   const w = words[prefs.language] || words.en;
@@ -228,9 +228,14 @@ export default function AssistantChat({ expand }) {
     };
   }, []);
   useEffect(() => {
-    if (thread.length && log.current)
-      log.current.scrollTop = log.current.scrollHeight;
-  }, [thread, busy]);
+    const panel = log.current;
+    const scroll = () => { panel.scrollTop = panel.scrollHeight; };
+    const observer = new ResizeObserver(scroll);
+    observer.observe(panel);
+    observer.observe(panel.firstElementChild);
+    scroll();
+    return () => observer.disconnect();
+  }, []);
   async function send(e) {
     e.preventDefault();
     const question = draft.trim();
@@ -302,7 +307,7 @@ export default function AssistantChat({ expand }) {
   );
   return (
     <section
-      className={'snail-chat' + (thread.length || typing ? ' tall' : '')}
+      className={'snail-chat' + (thread.length || expanded ? ' tall' : '')}
       aria-label={w[0]}
     >
       <header>
@@ -314,6 +319,7 @@ export default function AssistantChat({ expand }) {
         <strong>{w[0]}</strong>
       </header>
       <div className="snail-log" ref={log} role="log" aria-live="polite">
+        <div>
         <p>{w[1]}</p>
         {alerts.length > 0 && (
           <div className="snail-alerts">
@@ -353,6 +359,7 @@ export default function AssistantChat({ expand }) {
           </p>
         ))}
         {busy && <p role="status">{w[4]}</p>}
+        </div>
       </div>
       <form onSubmit={send}>
         <input
