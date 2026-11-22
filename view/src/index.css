@@ -616,3 +616,9 @@ input, select, textarea { font-family: inherit; }
 .transactions-table tr > :nth-child(n+4) { width: 1%; white-space: nowrap; text-align: right; padding-inline: .3rem; }
 
 .forecast-fields { border: 0; padding: 0; }
+.sidebar-brand > div { flex: 1; min-width: 0; container-type: inline-size; }
+.sidebar-brand h1 { white-space: nowrap; font-size: min(1.4rem, 11cqi); }
+.daily-flow .balance-figure { margin-top: 1rem; }
+.daily-flow .chart-key { justify-content: center; }
+.scenario-rule { margin-block: .75rem; border: 1px solid var(--border); border-radius: 8px; padding: .75rem; }
+.scenario-rule legend { padding-inline: .3rem; font-weight: 600; }

@@ -78,32 +78,26 @@ export function budgetCoverage(analysis, hasData) {
 
 }
 
-export function stressForecast(
-  analysis,
-  rent,
-  payroll,
-  delay,
-  receiptCategory,
-) {
+export function scenarioGroup(flow) {
+  return JSON.stringify([flow.category, cents(flow.amount_eur) < 0 ? 'out' : 'in']);
+}
+
+export function stressForecast(analysis, changes) {
   const delta = new Map();
   const add = (day, amount) => delta.set(day, (delta.get(day) || 0) + amount);
   for (const flow of analysis.plan) {
+    const rule = changes[scenarioGroup(flow)];
+    if (!rule) continue;
     const amount = cents(flow.amount_eur);
-    if (amount < 0) {
-      const type =
-        operatingCost(flow.category) || operatingCost(flow.description);
-      const percent = type === 'rent' ? rent : type === 'payroll' ? payroll : 0;
-      add(flow.date, -Math.round((-amount * percent) / 100));
-    } else if (delay && flow.category === receiptCategory) {
-      const day = new Date(flow.date + 'T00:00:00Z');
-      day.setUTCDate(day.getUTCDate() + delay);
-      add(flow.date, -amount);
-      add(day.toISOString().slice(0, 10), amount);
-    }
+    const day = new Date(flow.date + 'T00:00:00Z');
+    day.setUTCDate(day.getUTCDate() + Number(rule.delay));
+    add(flow.date, -amount);
+    const adjusted = Math.sign(amount) * Math.round(Math.abs(amount) * (100 + Number(rule.percent)) / 100);
+    add(day.toISOString().slice(0, 10), adjusted);
   }
   let cumulative = 0;
-  return analysis.forecast.daily_balances.map((p) => {
-    cumulative += delta.get(p.day) || 0;
-    return { day: p.day, balance: (cents(p.balance) + cumulative) / 100 };
+  return analysis.forecast.daily_balances.map(point => {
+    cumulative += delta.get(point.day) || 0;
+    return { day: point.day, balance: (cents(point.balance) + cumulative) / 100 };
   });
 }

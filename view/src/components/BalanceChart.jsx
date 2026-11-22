@@ -91,6 +91,7 @@ export default function BalanceChart({ points, seriesLabel, action, actionLabel,
               stroke="var(--text-muted)"
             />
             <Tooltip
+              itemSorter={item => -Number(item.value)}
               formatter={(v) => (
                 <span className={neutral && Number(v) < 0 ? 'amount-neg' : undefined}>
                   {eur(v)}
@@ -102,11 +103,12 @@ export default function BalanceChart({ points, seriesLabel, action, actionLabel,
             {!neutral && floor < 0 && (
               <ReferenceArea y1={floor} y2={0} fill="var(--danger)" fillOpacity={0.16} />
             )}
-            <ReferenceLine
+            {(!seriesLabel || (low < 0 && high > 0)) && <ReferenceLine
+              strokeDasharray={seriesLabel ? "6 4" : undefined}
               y={0}
               stroke="var(--text-muted)"
               strokeWidth={2}
-            />
+            />}
             {reserve != null && (
               <ReferenceLine
                 y={Number(reserve)}

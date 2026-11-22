@@ -1,19 +1,30 @@
 import { usePreferences } from '../context/Preferences';
 import React from 'react';
 import { useApp } from '../context/AppContext';
-import {CashOverview, SpendingTrends} from "./CashOverview";
+import {CashOverview, SpendingTrends, monthEnd, useQuarterOutlook} from "./CashOverview";
 import BalanceChart from './BalanceChart';
 
 export default function Dashboard() {
+  const {state} = useApp();
+  return <Overview key={state.revision} />;
+}
+
+function Overview() {
   const { t: tr, money: eur, prefs } = usePreferences();
   const { state } = useApp();
   const fc = state.analysis.forecast;
+  const outlook = useQuarterOutlook(state.revision);
+  const end = monthEnd(fc.as_of, 1);
+  const daily = fc.daily_balances.at(-1)?.day >= end ? fc.daily_balances : outlook.forecast?.daily_balances;
+  const period = daily?.filter(p => p.day <= end);
+  const lowest = period?.reduce((min, point) => Number(point.balance) < Number(min.balance) ? point : min);
   const metrics = [
     [
-      tr("Lowest balance ·") + ' ' + state.settings.horizon_days + ' ' + tr("days"),
-      eur(fc.minimum_balance),
-      tr("Lowest forecast close, on") + ' ' + fc.minimum_on + '.',
-      Number(fc.minimum_balance) < 0,
+      tr('Lowest balance over the next month'),
+      lowest ? eur(lowest.balance) : '—',
+      lowest ? period[0].day + ' – ' + end + ' · ' + tr('Minimum on') + ' ' + lowest.day
+        : tr(outlook.failed ? 'Forecast unavailable.' : 'Loading forecast…'),
+      lowest && Number(lowest.balance) < 0,
     ],
     [
       tr("First deficit"),
@@ -49,7 +60,7 @@ export default function Dashboard() {
           reserve={fc.reserve}
         />
       </section>
-      <SpendingTrends/>
+      <SpendingTrends outlook={outlook}/>
       {(() => {
         const closingCents = Math.round(Number(fc.opening_balance) * 100);
         const movementCents = state.transactions

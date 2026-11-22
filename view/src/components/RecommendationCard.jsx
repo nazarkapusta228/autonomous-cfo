@@ -74,6 +74,23 @@ function Comparison({ role, proposal, fc }) {
   );
 }
 
+function CashPressure({ analysis }) {
+  const {t, money} = usePreferences();
+  const spending = new Map();
+  const net = new Map();
+  for (const flow of analysis.plan) {
+    const amount = Math.round(Number(flow.amount_eur) * 100);
+    net.set(flow.date, (net.get(flow.date) || 0) + amount);
+    if (amount < 0) spending.set(flow.category, (spending.get(flow.category) || 0) - amount);
+  }
+  const largest = [...spending].sort((a,b) => b[1] - a[1])[0];
+  const worst = [...net].sort((a,b) => a[1] - b[1])[0];
+  return <dl className="data-strip">
+    <div><dt>{t('Largest spending category')}</dt><dd>{largest ? t(largest[0]) + ' · ' + money(largest[1]/100) : '—'}</dd></div>
+    <div><dt>{t('Largest daily net outflow')}</dt><dd>{worst?.[1] < 0 ? worst[0] + ' · ' + money(-worst[1]/100) : '—'}</dd></div>
+  </dl>;
+}
+
 export default function RecommendationCard({ role }) {
   const { t: tr, money: eur } = usePreferences();
   const { state, busy, submit } = useApp();
@@ -107,22 +124,8 @@ export default function RecommendationCard({ role }) {
           {p.available_until && ' ' + tr("· Available through") + ' ' + p.available_until}
         </p>
       )}
-      {role === 'liquidity' && (
-        <dl className="data-strip">
-          <div>
-            <dt>{tr("Lowest projected cash")}</dt>
-            <dd>{eur(state.analysis.forecast.minimum_balance)}</dd>
-          </div>
-          <div>
-            <dt>{tr("Target reserve")}</dt>
-            <dd>{eur(state.analysis.forecast.reserve)}</dd>
-          </div>
-          <div>
-            <dt>{tr("Funding gap")}</dt>
-            <dd>{eur(state.analysis.forecast.funding_needed)}</dd>
-          </div>
-        </dl>
-      )}
+      {p.explanation && <p>{tr(p.explanation)}</p>}
+      <CashPressure analysis={state.analysis} />
       {role === 'liquidity' && state.analysis.forecast.drivers.length > 0 && (
         <table className="table section">
           <caption>{tr("Planned outflows contributing to the shortfall")}</caption>

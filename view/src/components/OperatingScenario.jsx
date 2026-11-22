@@ -1,135 +1,59 @@
 import React, { useState } from 'react';
 import { usePreferences } from '../context/Preferences';
-import { stressForecast, operatingCost } from '../lib/cashMetrics';
+import { cents, scenarioGroup, stressForecast } from '../lib/cashMetrics';
 import BalanceChart from './BalanceChart';
 
 export default function OperatingScenario({ analysis }) {
   const { t, money } = usePreferences();
-  const [rent, setRent] = useState('0'),
-    [salary, setSalary] = useState('0'),
-    [delay, setDelay] = useState('0');
-  const receipts = [
-    ...new Set(
-      analysis.plan
-        .filter((p) => Number(p.amount_eur) > 0)
-        .map((p) => p.category),
-    ),
-  ];
-  const [category, setCategory] = useState(
-    receipts.find((c) => /receivabl|revenue|sales/i.test(c)) ||
-      receipts[0] ||
-      '',
-  );
-  const inputs = [
-    [t('Rent increase (%)', 'Podwyżka czynszu (%)'), rent, setRent, 1000],
-    [t('Payroll increase (%)', 'Podwyżka płac (%)'), salary, setSalary, 1000],
-    [
-      t('Receipt delay (days)', 'Opóźnienie wpływu (dni)'),
-      delay,
-      setDelay,
-      365,
-    ],
-  ];
-  const valid =
-    inputs.every(
-      ([, v, , max]) => v !== '' && Number.isFinite(+v) && +v >= 0 && +v <= max,
-    ) && Number.isInteger(+delay);
-  const forecast = analysis.forecast,
-    result = valid
-      ? stressForecast(analysis, +rent, +salary, +delay, category)
-      : [];
-  const costCount = (kind) =>
-    analysis.plan.filter(
-      (p) =>
-        Number(p.amount_eur) < 0 &&
-        (operatingCost(p.category) || operatingCost(p.description)) === kind,
-    ).length;
-  return (
-    <section className="card mb-4 operating-scenario">
-      <h3>
-        {t('Operating cash scenario', 'Scenariusz przepływów operacyjnych')}
-      </h3>
-      <p className="card-sub">
-        {t(
-          'Adjust the current forecast. Delayed receipts appear on the new date and may move beyond the chart.',
-          'Zmień założenia prognozy. Opóźnione wpływy pojawią się w nowym terminie, także poza zakresem wykresu.',
-        )}
-      </p>
-      <div className="data-tools">
-        {inputs.map(([label, v, set, max]) => (
-          <label key={label}>
-            {label}
-            <input
-              type="number"
-              min="0"
-              max={max}
-              step={set === setDelay ? '1' : 'any'}
-              value={v}
-              onChange={(e) => set(e.target.value)}
-            />
-          </label>
-        ))}
-        <label>
-          {t('Receipts to delay', 'Opóźniane wpływy')}
-          <select
-            value={category}
-            disabled={!receipts.length}
-            onChange={(e) => setCategory(e.target.value)}
-          >
-            {!receipts.length && <option value="">—</option>}
-            {receipts.map((c) => (
-              <option key={c} value={c}>
-                {t(c)}
-              </option>
-            ))}
-          </select>
-        </label>
-      </div>
-      <p className="projection-result">
-        {t('Matching forecast entries', 'Dopasowane pozycje prognozy')} ·{' '}
-        {t('Rent', 'Czynsz')} {costCount('rent')} · {t('Payroll', 'Płace')}{' '}
-        {costCount('payroll')} · {t('Receipts', 'Wpływy')}{' '}
-        {
-          analysis.plan.filter(
-            (p) => p.category === category && Number(p.amount_eur) > 0,
-          ).length
-        }
-      </p>
-      {valid ? (
-        <>
-          <dl className="data-strip">
-            <div>
-              <dt>
-                {t('Lowest scenario balance', 'Najniższe saldo scenariusza')}
-              </dt>
-              <dd>{money(Math.min(...result.map((p) => p.balance)))}</dd>
-            </div>
-            <div>
-              <dt>{t('Change at forecast end', 'Zmiana na końcu prognozy')}</dt>
-              <dd>
-                {money(
-                  result.at(-1).balance -
-                    Number(forecast.daily_balances.at(-1).balance),
-                )}
-              </dd>
-            </div>
-          </dl>
-          <BalanceChart forecast
-            points={forecast.daily_balances}
-            actionLabel={t('Scenario balance','Saldo scenariusza')}
-            action={result}
-            reserve={forecast.reserve}
-            neutral
-          />
-        </>
-      ) : (
-        <p role="status">
-          {t(
-            'Enter increases from 0 to 1000% and a whole delay from 0 to 365 days.',
-            'Podaj podwyżki od 0 do 1000% i opóźnienie od 0 do 365 pełnych dni.',
-          )}
-        </p>
-      )}
-    </section>
-  );
+  const [changes, setChanges] = useState({});
+  const forecast = analysis.forecast;
+  const options = [...new Set(analysis.plan.map(scenarioGroup))].sort();
+  function label(key) {
+    const [category, direction] = JSON.parse(key);
+    return t(category) + ' · ' + t(direction === 'in' ? 'Cash receipts' : 'Expenses');
+  }
+  function update(key, field, value) {
+    setChanges(previous => ({...previous, [key]: {...previous[key], [field]: value}}));
+  }
+  const valid = Object.values(changes).every(({percent, delay}) =>
+    percent !== '' && Number.isFinite(+percent) && +percent >= -100 && +percent <= 1000 &&
+    delay !== '' && Number.isInteger(+delay) && +delay >= 0 && +delay <= 365);
+  const result = valid ? stressForecast(analysis, changes) : [];
+  function metrics(points) {
+    const lowest = Math.min(cents(forecast.opening_balance), ...points.map(p => cents(p.balance)));
+    return [money(points.at(-1).balance), money(lowest / 100),
+      money(Math.max(0, cents(forecast.reserve) - lowest) / 100),
+      (Number(forecast.opening_balance) < Number(forecast.reserve) ? forecast.as_of :
+        points.find(p => cents(p.balance) < cents(forecast.reserve))?.day) || t('None in horizon')];
+  }
+  const labels = ['Closing balance', 'Lowest balance', 'Funding needed', 'First reserve shortfall'];
+  const base = metrics(forecast.daily_balances);
+  const scenario = valid ? metrics(result) : [];
+  return <section className="card mb-4 operating-scenario">
+    <h3>{t('Operating cash scenario', 'Scenariusz przepływów operacyjnych')}</h3>
+    <p className="card-sub">{t('Choose forecast categories to change their amounts or delay their payments. Compare the result with the original forecast.')}</p>
+    <div className="data-tools"><label>{t('Add category')}
+      <select value="" onChange={e => setChanges({...changes, [e.target.value]: {percent:'0', delay:'0'}})}>
+        <option value="" disabled>{t('Select a category')}</option>
+        {options.filter(key => !changes[key]).map(key => <option key={key} value={key}>{label(key)}</option>)}
+      </select>
+    </label></div>
+    {Object.entries(changes).map(([key, rule]) => <fieldset className="data-tools scenario-rule" key={key}>
+      <legend>{label(key)}</legend>
+      <label>{t('Amount change (%)')}<input type="number" min="-100" max="1000" step="any"
+        value={rule.percent} onChange={e=>update(key,'percent',e.target.value)}/></label>
+      <label>{t('Delay (days)')}<input type="number" min="0" max="365" step="1"
+        value={rule.delay} onChange={e=>update(key,'delay',e.target.value)}/></label>
+      <button className="btn btn-ghost" onClick={() => setChanges(previous => {
+        const next = {...previous}; delete next[key]; return next;
+      })}>{t('Remove')}</button>
+    </fieldset>)}
+    {valid ? <>
+      <table className="table section"><thead><tr><th>{t('Metric')}</th><th>{t('Baseline')}</th><th>{t('Scenario')}</th></tr></thead>
+        <tbody>{labels.map((name,i) => <tr key={name}><th scope="row">{t(name)}</th><td>{base[i]}</td><td>{scenario[i]}</td></tr>)}</tbody>
+      </table>
+      <BalanceChart forecast neutral points={forecast.daily_balances} action={result}
+        actionLabel={t('Scenario balance','Saldo scenariusza')} reserve={forecast.reserve}/>
+    </> : <p role="status">{t('Enter a change from −100% to 1000% and a whole delay from 0 to 365 days.')}</p>}
+  </section>;
 }

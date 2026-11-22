@@ -99,7 +99,7 @@ export function CashOverview() {
   );
 }
 
-export function SpendingTrends() {
+export function SpendingTrends({ outlook }) {
   const { state } = useApp(),
     { t, money } = usePreferences();
   const history = monthHistory(state.transactions, state.settings.as_of),
@@ -158,14 +158,12 @@ export function SpendingTrends() {
           {expanded ? '▴ ' + t('Show fewer') : '▾ ' + t('Show more') + ' (' + (rows.length - 5) + ')'}
         </button>}
       </section>
-      <CashResult key={state.revision} revision={state.revision} />
+      <CashResult {...outlook} />
     </>
   );
 }
 
-function CashResult({ revision }) {
-  const { t, money } = usePreferences();
-  const [months, setMonths] = useState(1);
+export function useQuarterOutlook(revision) {
   const [forecast, setForecast] = useState(null);
   const [failed, setFailed] = useState(false);
   const [attempt, setAttempt] = useState(0);
@@ -177,24 +175,36 @@ function CashResult({ revision }) {
       .catch(() => { if (active) setFailed(true); });
     return () => { active = false; };
   }, [revision, attempt]);
+  return { forecast, failed, retry: () => setAttempt(value => value + 1) };
+}
+
+export function monthEnd(asOf, months) {
+  const start = new Date(asOf + 'T00:00:00Z');
+  const end = new Date(Date.UTC(start.getUTCFullYear(), start.getUTCMonth() + months + 1, 0));
+  end.setUTCDate(Math.min(start.getUTCDate(), end.getUTCDate()));
+  return end.toISOString().slice(0, 10);
+}
+
+function CashResult({ forecast, failed, retry }) {
+  const { t, money } = usePreferences();
+  const [months, setMonths] = useState(1);
   let net;
   let endDate;
   let differences = [];
   if (forecast) {
-    const start = new Date(forecast.as_of + 'T00:00:00Z');
-    const end = new Date(Date.UTC(start.getUTCFullYear(), start.getUTCMonth() + months + 1, 0));
-    end.setUTCDate(Math.min(start.getUTCDate(), end.getUTCDate()));
-    endDate = end.toISOString().slice(0, 10);
+    endDate = monthEnd(forecast.as_of, months);
     const close = forecast.daily_balances.find(point => point.day === endDate);
-    differences = [
-      { day: forecast.as_of, balance: 0 },
-      ...forecast.daily_balances.filter(point => point.day > forecast.as_of && point.day <= endDate)
-        .map(point => ({ day: point.day, balance: (cents(point.balance) - cents(forecast.opening_balance)) / 100 })),
-    ];
+    let previous = cents(forecast.opening_balance);
+    differences = forecast.daily_balances.filter(point => point.day <= endDate).map(point => {
+      const current = cents(point.balance);
+      const balance = (current - previous) / 100;
+      previous = current;
+      return { day: point.day, balance };
+    });
     if (close) net = (cents(close.balance) - cents(forecast.opening_balance)) / 100;
   }
-  return <section className="card mb-4">
-    <h3>{t('Forecast cash difference')}</h3>
+  return <section className="card mb-4 daily-flow">
+    <h3>{t('Daily net cash flow')}</h3>
     <div className="controls quarter-picker" role="group" aria-label={t('Forecast period', 'Okres prognozy')}>
       {[1, 2, 3].map(n => <button key={n} className="btn btn-ghost" aria-pressed={months === n}
         onClick={() => setMonths(n)}>{t(['1 month', '2 months', '3 months'][n - 1])}</button>)}
@@ -202,8 +212,8 @@ function CashResult({ revision }) {
     {net != null ? <>
       <p className="card-sub">{t('Expected receipts minus planned payments through')} {endDate}</p>
       <strong className={net < 0 ? 'amount-neg' : net > 0 ? 'amount-pos' : undefined}>{money(net)}</strong>
-      <BalanceChart points={differences} seriesLabel={t('Forecast cash difference')} neutral />
-    </> : failed ? <p role="alert">{t('Forecast unavailable.', 'Prognoza niedostępna.')} <button className="btn btn-ghost" onClick={() => setAttempt(attempt + 1)}>{t('Retry')}</button></p>
+      <BalanceChart centered points={differences} seriesLabel={t('Daily net cash flow')} neutral />
+    </> : failed ? <p role="alert">{t('Forecast unavailable.', 'Prognoza niedostępna.')} <button className="btn btn-ghost" onClick={retry}>{t('Retry')}</button></p>
       : <p role="status">{t('Loading forecast…', 'Wczytywanie prognozy…')}</p>}
   </section>;
 }

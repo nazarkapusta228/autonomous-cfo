@@ -107,8 +107,8 @@ function Dataset({ kind, title, description }) {
       </form>}
       <div className="data-tools">
         <label>
-          {title}
           <input
+            aria-label={title}
             ref={picker}
             type="file"
             accept=".csv,.json,.txt"
