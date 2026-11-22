@@ -316,7 +316,6 @@ export default function AssistantChat({ expand, expanded }) {
             busy ? 'thinking' : idle ? 'looking' : typing ? 'writing' : 'rest'
           }
         />
-        <strong>{w[0]}</strong>
       </header>
       <div className="snail-log" ref={log} role="log" aria-live="polite">
         <div>

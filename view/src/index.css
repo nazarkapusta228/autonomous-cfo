@@ -623,16 +623,14 @@ input, select, textarea { font-family: inherit; }
 .scenario-rule { margin-block: .75rem; border: 1px solid var(--border); border-radius: 8px; padding: .75rem; }
 .scenario-rule legend { padding-inline: .3rem; font-weight: 600; }
 
-.with-assistant {overflow-y:auto;transition:width .34s ease;}
+.with-assistant {min-height:0;transition:width .34s ease;}
 .with-assistant .sidebar-nav {flex:0 0 auto;overflow:visible;}
 .with-assistant .sidebar-nav > :last-child {margin-top:0;}
 @media(min-width:721px){.with-assistant.chat-open{width:min(486px,52vw);}}
-.snail-chat {margin:1.6rem .85rem 1rem;padding:.75rem;border:1px solid var(--border);border-radius:14px;background:color-mix(in srgb,var(--bg-card) 84%,var(--primary));min-width:0;}
-.snail-chat header {display:flex;align-items:center;gap:.45rem;font-size:.9rem;}
+.snail-chat {display:flex;flex-direction:column;min-height:0;margin:1.6rem .85rem 1rem;padding:.75rem;border:1px solid var(--border);border-radius:14px;background:color-mix(in srgb,var(--bg-card) 84%,var(--primary));min-width:0;}
 .with-assistant .sidebar-settings {margin-top:auto;display:flex;padding-bottom:.75rem;}
-.snail-chat header {display:grid;gap:.55rem;margin-bottom:.7rem;}
-.cfo-snail {width:108px;height:auto;position:relative;left:0;transform:translateX(0);transition:left .45s ease,transform .45s ease;}
-.chat-open .cfo-snail {left:50%;transform:translateX(-50%);}
+.snail-chat header {display:flex;justify-content:center;flex:none;margin-bottom:.7rem;}
+.cfo-snail {width:108px;height:auto;}
 .snail-chat form button {display:grid;place-items:center;}
 .cfo-snail .snail-shell {transform-box:fill-box;transform-origin:50% 85%;}
 .cfo-snail.writing .snail-shell {animation:shell-write .8s ease-in-out infinite alternate;}
@@ -643,12 +641,12 @@ input, select, textarea { font-family: inherit; }
 @keyframes shell-think {from{transform:rotate(8deg)}to{transform:translate(-2px,-5px) rotate(-13deg)}}
 @keyframes face-write {to{transform:translateY(3px) rotate(6deg)}}
 @keyframes face-think {to{transform:translateY(-2px) rotate(-8deg)}}
-.snail-log {height:10.8rem;overflow:auto;transition:height .32s ease;font-size:.84rem;overflow-wrap:anywhere;scrollbar-width:thin;}
-.snail-chat.tall .snail-log {height:clamp(18rem,48vh,32rem);}
+.snail-log {min-height:0;height:10.8rem;overflow:auto;transition:height .32s ease;font-size:.84rem;overflow-wrap:anywhere;scrollbar-width:thin;}
+.snail-chat.tall .snail-log {min-height:0;height:clamp(18rem,48vh,32rem);}
 .snail-log p {padding:.45rem .55rem;margin:.35rem 0;white-space:pre-wrap;background:var(--bg-card);border-radius:8px;}
 .snail-alerts small {color:var(--text-muted);}
 .snail-log .snail-question {margin-left:1.25rem;background:var(--bg-elev);}
-.snail-chat form {display:flex;gap:.4rem;margin-top:.55rem;}
+.snail-chat form {display:flex;flex:none;gap:.4rem;margin-top:.55rem;}
 .snail-chat input {flex:1;min-width:0;background:var(--bg-elev);color:var(--text);border:1px solid var(--border);border-radius:7px;padding:.55rem;font:inherit;font-size:.85rem;}
 .snail-chat form button {border:0;border-radius:7px;padding:.5rem;background:var(--primary);color:var(--bg);cursor:pointer;}
 .snail-chat button:disabled {opacity:.5;}
