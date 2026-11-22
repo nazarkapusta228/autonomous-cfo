@@ -9,7 +9,7 @@ from fastapi.testclient import TestClient
 from cfo.web import app
 
 
-def client():
+def client(*, seed=True):
     browser = TestClient(app, headers={"X-CFO-Client": "dashboard"})
     credentials = {"email": f"{uuid4()}@example.test", "password": "test-only-password"}
     with patch("cfo.accounts.send_code") as mail:
@@ -22,6 +22,8 @@ def client():
         json=dict(purpose="activate", code=code, **credentials),
     ).is_success
     assert browser.post("/api/account/login", json=credentials).is_success
+    if not seed:
+        return browser
     initial = state(browser)
     statement = Path(__file__).parents[1] / "data/sample/pizzeria-amalfi-2025.csv"
     assert browser.post(
@@ -228,3 +230,31 @@ def test_planned_payment_edit_preserves_bookings_and_checks_revision(postgres_ur
     assert before["history"] == after["history"]
     assert before["analysis"]["forecast"] != after["analysis"]["forecast"]
     assert owner.post("/api/plan/edit", json=payload).status_code == 409
+
+
+def test_full_statement_data_import_on_fresh_account(postgres_url, monkeypatch):
+    monkeypatch.setenv("DATABASE_URL", postgres_url)
+    browser = client(seed=False)
+    initial = state(browser)
+    assert browser.post(
+        "/api/forecast",
+        json={
+            "revision": initial["revision"],
+            "settings": dict(initial["settings"], as_of="2026-11-22"),
+        },
+    ).is_success
+    statement = Path(__file__).parents[1] / "data/sample/pizzeria-amalfi-2025.csv"
+    upload = dict(
+        revision=state(browser)["revision"], filename=statement.name, content=statement.read_text()
+    )
+    with patch("cfo.data_files.httpx.post") as model:
+        preview = browser.post("/api/data/statement/preview", json=upload)
+        model.assert_not_called()
+    assert preview.is_success, preview.text
+    assert preview.json()["count"] == 1125
+    response = browser.post(
+        "/api/data/statement/import",
+        json=dict(upload, mapping=preview.json()["mapping"], starting_balance="0"),
+    )
+    assert response.is_success, response.text
+    assert len(state(browser)["statement_rows"]) == 1125

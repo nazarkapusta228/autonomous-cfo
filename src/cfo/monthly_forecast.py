@@ -60,7 +60,7 @@ def project(transactions, cutoff, days):
                 rows, month, window, first, start - timedelta(days=1)
             ).items():
                 predicted[min(day, end.day)] += amount
-            drift = 0
+            drift = Decimal(0)
             for day in range(1, end.day + 1):
                 error = predicted[day] - actual[day]
                 residuals[window].append(float(error))

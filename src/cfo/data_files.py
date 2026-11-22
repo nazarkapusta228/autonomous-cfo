@@ -94,9 +94,11 @@ def suggest(kind, headers):
     mapping = {f: known.get(normalize(f), "") for f in fields}
     missing = [f for f in fields if not mapping[f]]
     remaining = [h for h in headers if h not in mapping.values()]
-    if not missing or not remaining:
+    if not remaining or all(field in OPTIONAL[kind] for field in missing):
         return mapping, False
     cfg = Settings()
+    if not cfg.llm_base_url:
+        return mapping, False
     token = cfg.llm_api_key.get_secret_value()
     schema = {
         "type": "object",
