@@ -1,78 +1,12 @@
 import { usePreferences } from '../context/Preferences';
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
-import { nextDay } from '../lib/api';
 import CreditOptions from "./CreditOptions";
-import DateField from './DateField';
-import BalanceChart from './BalanceChart';
 
 const labels = {
   hold: 'Hold cash',
   propose_credit: 'Bridge credit line',
 };
-
-function Comparison({ role, proposal, fc }) {
-  const { t: tr, money: eur } = usePreferences();
-  const { busy, submit } = useApp();
-  const [date, setDate] = useState(
-    proposal.available_until || nextDay(fc.daily_balances.at(-1).day),
-  );
-  const [interest, setInterest] = useState('0.00');
-  const [comparison, setComparison] = useState(null);
-  async function compare(event) {
-    event.preventDefault();
-    const result = await submit(
-      'agents/' + role + '/comparison',
-      { terms: { settles_on: date, interest_eur: interest } },
-      false,
-    );
-    setComparison(result);
-  }
-  return (
-    <details className="section">
-      <summary>{tr("Compare cash balances")}</summary>
-      <form className="controls" onSubmit={compare} onChange={() => setComparison(null)}>
-        <DateField
-          label={tr("Simulated settlement")}
-          value={date}
-          min={nextDay(proposal.execute_on)}
-          max={proposal.available_until || undefined}
-          onChange={(day) => {
-            setDate(day);
-            setComparison(null);
-          }}
-          shortcuts={[
-            [tr("Next day"), nextDay(proposal.execute_on)],
-            [tr("Forecast end"), fc.daily_balances.at(-1).day],
-          ]}
-        />
-        <label> {tr("Assumed interest (€)")} <input
-            type="number"
-            step=".01"
-            min="0"
-            required
-            value={interest}
-            onChange={(e) => setInterest(e.target.value)}
-          />
-        </label>
-        <button disabled={busy} className="btn btn-ghost"> {tr("Compare scenarios")} </button>
-      </form>
-      {comparison && (
-        <>
-          <p> {tr("Compare the baseline with the balance after funding or investing, including settlement and assumed interest. Principal outstanding at horizon end:")}{' '}
-            {eur(comparison.outstanding_principal)}.
-          </p>
-          <BalanceChart forecast
-            neutral
-            points={comparison.baseline}
-            action={comparison.with_action}
-            reserve={fc.reserve}
-          />
-        </>
-      )}
-    </details>
-  );
-}
 
 function CashPressure({ analysis }) {
   const {t, money} = usePreferences();
@@ -162,28 +96,11 @@ export default function RecommendationCard({ role }) {
           <li key={r}>{tr(r)}</li>
         ))}
       </ul>
-      <div className="badge badge-sim">
+      {saved.status !== 'pending' && <div className="badge badge-sim">
         {tr(saved.status.replace('_', ' '))}{' '}
         {saved.application_id && ' · ' + tr('Request #') + saved.application_id}
-      </div>
+      </div>}
       {saved.status==='simulated' && <p>{tr('Owner-approved simulation. Bank execution has not been reported.','Symulacja zatwierdzona przez właściciela. Brak potwierdzenia wykonania przez bank.')}</p>}
-      {saved.status === 'pending' && (
-        <div className="modal-actions">
-          {['reject', 'approve'].map((c) => (
-            <button
-              key={c}
-              className={'btn ' + (c === 'approve' ? 'btn-primary' : 'btn-ghost')}
-              disabled={busy}
-              onClick={() => submit('agents/' + role + '/decision/' + c)}
-            >
-              {c === 'approve' ? tr("Approve (simulation)") : tr("Reject")}
-            </button>
-          ))}
-        </div>
-      )}
-      {p.product && (
-        <Comparison key={saved.id} role={role} proposal={p} fc={state.analysis.forecast} />
-      )}
     </div>
   );
 }
