@@ -220,6 +220,25 @@ def signup(body: Registration, request: Request):
     return mail_receipt()
 
 
+def start_session(conn, response, user):
+    token = secrets.token_urlsafe(32)
+    conn.execute("DELETE FROM cfo_sessions WHERE expires_at<=now()")
+    conn.execute(
+        "INSERT INTO cfo_sessions (digest,user_id,expires_at) "
+        "VALUES (%s,%s,now()+%s * interval '1 second')",
+        (digest(token), user["id"], SESSION_SECONDS),
+    )
+    response.set_cookie(
+        COOKIE,
+        token,
+        httponly=True,
+        samesite="strict",
+        secure=os.getenv("CFO_SECURE_COOKIE") == "1",
+        max_age=SESSION_SECONDS,
+    )
+    return public(user)
+
+
 @router.post("/login")
 def login(body: Credentials, response: Response):
     limit("login:" + body.email, 30)
@@ -230,22 +249,7 @@ def login(body: Credentials, response: Response):
         stored = user["password_hash"] if user else "0" * 32 + ":" + "0" * 128
         if not matches(body.password, stored) or not user or not user["verified"]:
             raise HTTPException(401, "Incorrect credentials or unverified email")
-        token = secrets.token_urlsafe(32)
-        conn.execute("DELETE FROM cfo_sessions WHERE expires_at<=now()")
-        conn.execute(
-            "INSERT INTO cfo_sessions (digest,user_id,expires_at) "
-            "VALUES (%s,%s,now()+%s * interval '1 second')",
-            (digest(token), user["id"], SESSION_SECONDS),
-        )
-        response.set_cookie(
-            COOKIE,
-            token,
-            httponly=True,
-            samesite="strict",
-            secure=os.getenv("CFO_SECURE_COOKIE") == "1",
-            max_age=SESSION_SECONDS,
-        )
-        return public(user)
+        return start_session(conn, response, user)
 
 
 def request_code(body: Address, request: Request, purpose: Literal["activate", "reset"]):
@@ -341,7 +345,7 @@ def reset_password(body: ResetPassword):
 
 
 @router.post("/confirm")
-def confirm(request: Request, body: Confirmation):
+def confirm(request: Request, response: Response, body: Confirmation):
     with connection() as conn:
         row = check_code(conn, request, body.email, body.purpose, body.code)
         if not matches(body.password, row["password_hash"]):
@@ -363,6 +367,8 @@ def confirm(request: Request, body: Confirmation):
                 raise HTTPException(409, "Email address is unavailable") from exc
             conn.execute("DELETE FROM cfo_mail_codes WHERE user_id=%s", (row["id"],))
         conn.execute("DELETE FROM cfo_mail_codes WHERE digest=%s", (row["digest"],))
+        if body.purpose == "activate":
+            return {"ok": True, "user": start_session(conn, response, row)}
     return {"ok": True}
 
 

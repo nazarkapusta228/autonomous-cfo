@@ -74,7 +74,7 @@ export async function exerciseAccount(page) {
   await click('Resend code');
   assert.equal((await (await resent).json()).delivery, 'preview');
   await field('Email code', originalCode);
-  await click('Verify email');
+  await click('Sign up');
   await page
     .getByRole('alert')
     .filter({ hasText: 'Invalid or expired code' })
@@ -82,8 +82,9 @@ export async function exerciseAccount(page) {
   const latestCode = await code(email, 'Verify your email');
   assert.notEqual(latestCode, originalCode);
   await field('Email code', latestCode);
-  await click('Verify email');
-  await login(email, password);
+  await click('Sign up');
+  await page.locator('.user-chip').waitFor();
+  await page.reload();
   await click('Start tour');
   const tour = page.locator('dialog.workspace-tour');
   for (let step = 1; step <= 18; step++) {

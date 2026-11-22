@@ -28,11 +28,20 @@ def test_account_lifecycle(postgres_url, monkeypatch):
         "signup", first_name="Anna", last_name="Nowak", email=email, password=password
     ).is_success
     assert post("login", email=email, password=password).status_code == 401
-    assert verify("activate", password).is_success
+    wrong_code = f"{(int(messages[-1][2]) + 1) % 1000000:06d}"
+    assert (
+        post(
+            "confirm", email=email, purpose="activate", code=wrong_code, password=password
+        ).status_code
+        == 400
+    )
+    assert browser.get("/api/account/me").status_code == 401
+    activation = verify("activate", password)
+    assert activation.is_success
+    assert browser.get("/api/account/me").json() == activation.json()["user"]
+    assert browser.get("/api/workspace").is_success
     assert verify("activate", password).status_code == 400
-    login = post("login", email=email, password=password)
-    assert login.is_success
-    assert "Max-Age=604800" in login.headers["set-cookie"]
+    assert "Max-Age=604800" in activation.headers["set-cookie"]
     with psycopg.connect(postgres_url) as conn:
         assert conn.execute("SELECT expires_at-issued_at FROM cfo_sessions").fetchone() == (
             timedelta(days=7),

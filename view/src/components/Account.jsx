@@ -216,14 +216,13 @@ function Login() {
         change('login');
         setNotice('changed');
       } else {
-        await api('account/confirm', {
+        const { user } = await api('account/confirm', {
           ...values,
           email,
           password: signupPassword,
           purpose: mode,
         });
-        change('login');
-        setNotice('verified');
+        setUser(user);
       }
     } catch (err) {
       setError(err.message);
@@ -322,17 +321,13 @@ function Login() {
           )}
           {error && <p role="alert">{t(error)}</p>}
           <button disabled={busy} className="btn btn-primary">
-            {labels[mode]}
+            {mode === 'activate' ? t('Sign up', 'Zarejestruj się') : labels[mode]}
           </button>
         </form>
         {notice && (
           <p role="status">
             {
               {
-                verified: t(
-                  'Email verified. You can now sign in.',
-                  'Adres e-mail potwierdzony. Możesz się teraz zalogować.',
-                ),
                 changed: t(
                   'Password updated. Sign in with your new password.',
                   'Hasło zmienione. Zaloguj się nowym hasłem.',
