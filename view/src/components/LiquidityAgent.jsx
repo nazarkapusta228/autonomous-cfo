@@ -164,7 +164,7 @@ export default function LiquidityAgent() {
             <div><dt>{tr('Lowest projected cash')}</dt><dd>{eur(f.minimum_balance)} · {f.minimum_on}</dd></div>
           </dl>
           <p className="card-sub">{tr('Model window (months)')} · {a.model_window} · {a.weighted_model ? tr('Recency weighted') : tr('Simple average')} · {tr('Months backtested')} · {a.validation_months}</p>
-          <RecommendationCard role="liquidity" />
+          <RecommendationCard key={state.revision} role="liquidity" />
         </section>
       </div>
       <OperatingScenario key={'scenario-' + state.revision} analysis={a} />

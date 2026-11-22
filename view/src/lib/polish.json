@@ -1,4 +1,5 @@
 {
+  "Check ambiguous invoice references in your source files and reimport the corrected data.": "Sprawdź niejednoznaczne numery faktur w plikach źródłowych i ponownie zaimportuj poprawione dane.",
   "Daily net cash flow": "Dzienne przepływy netto",
   "Lowest balance over the next month": "Najniższe saldo w nadchodzącym miesiącu",
   "Minimum on": "Minimum w dniu",

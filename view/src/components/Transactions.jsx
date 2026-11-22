@@ -5,89 +5,6 @@ import { faMagnifyingGlass } from '@fortawesome/free-solid-svg-icons';
 import { useApp } from '../context/AppContext';
 import BalanceChart from './BalanceChart';
 
-function InvoiceReview() {
-  const { t: tr, money: eur } = usePreferences();
-  const { state, busy, submit } = useApp();
-  const report = state.analysis.reconciliation;
-  const [values, setValues] = useState({});
-  if (!state.has_invoices) return null;
-  return (
-    <section className="card mb-4">
-      <div className="card-title">{tr("Invoice reconciliation")}</div>
-      <p className="card-sub"> {tr("Imported invoices matched against booked statement payments. Confirm uncertain matches below.")} </p>
-      <p>
-        {Object.keys(report.settled).length} {tr("settled ·")} {report.outstanding.length} {tr("outstanding")} </p>
-      {Object.entries(report.settled).map(([invoice, row]) => (
-        <p key={invoice}>
-          <span>{invoice} {tr("· Settled by statement row")} {row}</span>
-          {' · '}{tr('Bank-booked amount','Kwota zaksięgowana')}{' '}{eur(state.statement_rows.find(payment=>payment.source_row===row)?.amount_eur)}
-        </p>
-      ))}
-      {report.outstanding.map((i) => (
-        <p key={i.invoice_id}>
-          {i.invoice_id} · {i.counterparty} {tr("· Due")} {i.due_on} · {eur(i.amount_eur)}
-          {report.unprojected_receivables.includes(i.invoice_id) &&
-            ' ' + tr("· Excluded from projected receipts")}
-        </p>
-      ))}
-      {Object.entries(report.ambiguous).map(([id, rows]) => (
-        <div className="controls" key={id}>
-          <label> {tr("Match invoice")} {id}
-            <select
-              aria-label={tr("Match invoice") + ' ' + id}
-              value={values[id] ?? ''}
-              onChange={(e) => setValues({ ...values, [id]: e.target.value })}
-            >
-              <option value="">{tr("Choose a match")}</option>
-              <option value="none">{tr("Keep outstanding")}</option>
-              {rows.map((r) => {
-                const t = state.transactions.find((t) => t.source_row === r);
-                return (
-                  <option key={r} value={r}> {tr("Row")} {r} · {t?.value_on} · {t?.reference}
-                  </option>
-                );
-              })}
-            </select>
-          </label>
-          <button
-            disabled={busy || !values[id]}
-            className="btn btn-primary"
-            onClick={() =>
-              submit('invoice-matches', {
-                invoice_id: id,
-                source_row: values[id] === 'none' ? null : Number(values[id]),
-              })
-            }
-          > {tr("Confirm match")} </button>
-        </div>
-      ))}
-      {Object.keys(report.payment_patterns).length > 0 && (
-        <table className="table section">
-          <caption>{tr("Payment timing from matched invoices")}</caption>
-          <thead>
-            <tr>
-              <th>{tr("Counterparty")}</th>
-              <th>{tr("Late payments / matched")}</th>
-              <th>{tr("Median delay")}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {Object.entries(report.payment_patterns).map(([party, p]) => (
-              <tr key={party}>
-                <td>{party}</td>
-                <td>
-                  {p.late_payments} / {p.payments}
-                </td>
-                <td>{p.median_delay_days} {tr("days")}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      )}
-    </section>
-  );
-}
-
 function EditCategory({ transaction, close, onSaved }) {
   const { t: tr } = usePreferences();
   const { submit, busy } = useApp();
@@ -209,7 +126,6 @@ export default function Transactions() {
   const offset = current * 50;
   return (
     <>
-      <InvoiceReview key={state.revision} />
       <section className="card mb-4">
         <div className="card-title">{tr("Account history")}</div>
         <BalanceChart neutral points={period.points} />

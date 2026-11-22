@@ -94,6 +94,8 @@ function CashPressure({ analysis }) {
 export default function RecommendationCard({ role }) {
   const { t: tr, money: eur } = usePreferences();
   const { state, busy, submit } = useApp();
+  const [expanded, setExpanded] = useState(false);
+  const drivers = state.analysis.forecast.drivers;
   const saved = state.assessments[role];
   const unresolved = Object.keys(state.analysis.reconciliation.ambiguous).length;
   if (!saved)
@@ -101,7 +103,7 @@ export default function RecommendationCard({ role }) {
       <div className="rec-block">
         <p>
           {unresolved
-            ? tr("Resolve the invoice matches in Transactions first.")
+            ? tr("Check ambiguous invoice references in your source files and reimport the corrected data.")
             : tr("Ask Qwen to review the current forecast and explain a decision.")}
         </p>
         <button
@@ -126,7 +128,8 @@ export default function RecommendationCard({ role }) {
       )}
       {p.explanation && <p>{tr(p.explanation)}</p>}
       <CashPressure analysis={state.analysis} />
-      {role === 'liquidity' && state.analysis.forecast.drivers.length > 0 && (
+      {role === 'liquidity' && drivers.length > 0 && (
+        <>
         <table className="table section">
           <caption>{tr("Planned outflows contributing to the shortfall")}</caption>
           <thead>
@@ -137,7 +140,7 @@ export default function RecommendationCard({ role }) {
             </tr>
           </thead>
           <tbody>
-            {state.analysis.forecast.drivers.map((d, i) => (
+            {(expanded ? drivers : drivers.slice(0, 3)).map((d, i) => (
               <tr key={i}>
                 <td className="date-cell">{d.date}</td>
                 <td>{tr(d.category)}</td>
@@ -146,6 +149,11 @@ export default function RecommendationCard({ role }) {
             ))}
           </tbody>
         </table>
+        {drivers.length > 3 && <button type="button" className="btn btn-ghost section" aria-expanded={expanded}
+          onClick={() => setExpanded(!expanded)}>
+          {expanded ? tr('Show fewer') : tr('Show more') + ' (' + (drivers.length - 3) + ')'}
+        </button>}
+        </>
       )}
       {p.action==='propose_credit' && <CreditOptions key={state.revision} forecast={state.analysis.forecast} proposal={p}/>}
       <h4>{tr("Risks to consider")}</h4>
@@ -173,16 +181,6 @@ export default function RecommendationCard({ role }) {
           ))}
         </div>
       )}
-      <div className="section">
-        <span
-          className="decision-lock"
-          tabIndex={0}
-          title={tr("Already assessed for this forecast. Change forecast inputs and run the forecast to generate another decision.")}
-        >
-          <button disabled className="btn btn-ghost"> {tr("Regenerate decision")} </button>
-        </span>
-        <p className="card-sub"> {tr("Already assessed. Change inputs in Liquidity Agent and run the forecast to enable a new decision.")} </p>
-      </div>
       {p.product && (
         <Comparison key={saved.id} role={role} proposal={p} fc={state.analysis.forecast} />
       )}
