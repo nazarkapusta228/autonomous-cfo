@@ -55,6 +55,10 @@ Our strongest result is a workflow an owner can follow from start to finish: spo
 
 [github.com/nazarkapusta228/autonomous-cfo](https://github.com/nazarkapusta228/autonomous-cfo)
 
+## Bonus challenges 
+- Run the model using vLLM on Red Hat OpenShift AI.
+- Use Jupyter Notebooks on Red Hat OpenShift AI.
+
 ## Local setup
 
 Use Python 3.12 or later, Node.js 22 and Docker Compose. Run these commands from the repository root.
